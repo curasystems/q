@@ -1,0 +1,45 @@
+{
+  "name": "q",
+  "version": "0.0.1",
+  "description": "q =",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js --reporter tap",
+    "testing": "supervisor -e js,coffee -n exit -- test.js --reporter spec"
+  },
+  "bin": "./cli.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/curasystems/q.git"
+  },
+  "keywords": [
+    "binaries",
+    "delivery",
+    "upload",
+    "cli",
+    "distribution"
+  ],
+  "dependencies": {
+    "underscore": "~1.4.4",
+    "underscore.string": "~2.3.1",
+    "optimist": "~0.3.5",
+    "coffee-script": "git://github.com/curasystems/coffee-script.git#source_maps",
+    "source-map-support": "git://github.com/curasystems/node-source-map-support.git",
+    "commander": "~1.1.1",
+    "adm-zip": "~0.4.3",
+    "node-native-zip": "~1.1.0",
+    "async": "~0.2.7"
+  },
+  "devDependencies": {
+    "sinon": "~1.6.0",
+    "sinon-chai": "~2.3.1",
+    "chai": "~1.5.0",
+    "mocha": "~1.8.2",
+    "async": "~0.2.6",
+    "growl": "~1.7.0"
+  },
+  "author": "Matthias Goetzke",
+  "license": "BSD",
+  "readmeFilename": "README.md",
+  "gitHead": "982afd75e8b7af097822e64176b95766e4a24bb3"
+}
