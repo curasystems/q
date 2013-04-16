@@ -12,35 +12,46 @@ semver = require('semver')
 #archiver = require('archiver')
 sha1 = require('./sha1')
 
+# Errors
 module.exports.InvalidManifestError = class InvalidManifestError extends Error
     constructor:(@details)->
 
+module.exports.ArgumentError = class ArgumentError extends Error
+    constructor:(@message)->super(@message)
+
+
+# Api
 module.exports.bundle = (manifestPath, callback)->
 
-    manifestPath = path.normalize(manifestPath)
+    if not manifestPath
+        throw new ArgumentError("missing path to manifest")
 
     p = new Package
 
     async.series [ 
-        (cb)->p.fill(manifestPath,cb)
+        (cb)->p.create(manifestPath,cb)
         (cb)->p.save(cb)
         ],
         (err)->callback(err,p)
     
     return p       
 
+# Classes
 class Package extends events.EventEmitter
 
     constructor: ()->
+        @name = null
+        @version = null
+        @description = null
         @files = []
         @path = null
-        @name = ''
-        @version = ''
-        @description = ''
-        @manifestPath = ''
+        @manifestPath = null
+        @cachePath = null
         
-    fill: (@manifestPath, callback)->
+    create: (manifestPath, callback)->
 
+        @manifestPath = path.normalize(manifestPath)
+    
         fs.exists @manifestPath, (exists)=>
             return callback() if not exists
 
@@ -55,6 +66,8 @@ class Package extends events.EventEmitter
                         @_processManifest manifest, (err)->cb(err,manifest)
                     ,(manifest, cb)=>
                         @_addFiles(manifest, cb)   
+                    ,(cb)=>
+                        @_calculateUid(cb)
                 ],
                 (err)=>
                     @emit 'end'
@@ -94,15 +107,15 @@ class Package extends events.EventEmitter
 
     _addFiles: (manifest,callback)->
 
-        glober = new glob.Glob '**/*', cwd:@path, debug:no
+        glober = new glob.Glob '**/*', cwd:@path, dot:no, debug:no
 
+        #glober.on 'match', (match)->console.log match
         glober.on 'error', callback
         glober.on 'end', (files)=>
 
             async.eachLimit files, 8, (file,cb)=>
                     @_addFile(file,cb)
-                , (err)->
-                    callback(err,@files)
+                , callback
         
     _addFile: (filePath, callback)->
 
@@ -124,10 +137,26 @@ class Package extends events.EventEmitter
                 @emit 'file', file
                 callback()
 
+    _calculateUid: (cb)->
+        
+        listing = 
+            name: @name
+            version: @version
+            files: @files
+
+        sha1OfListing = sha1.calculate new Buffer(JSON.stringify(listing))
+        @uid = sha1OfListing
+        cb(null, @uid)        
+
     save: (callback)->
 
-        qCacheDirectoryPath = path.join @path, '.q'
+        cacheDirectoryPath = path.join @path, '.q'
 
-        callback()
+        fs.mkdir cacheDirectoryPath, (err)=>
+
+            return callback(err) if err?.errno is not 47
+
+            @cachePath = path.join cacheDirectoryPath, @uid
+            callback(null, @cachePath)
 
 
