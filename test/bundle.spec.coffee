@@ -14,34 +14,38 @@ describe 'bundling packages', ->
 
     describe 'bundling test-folder-a', ->
         
-        it 'returns an EventEmitter object to track progress', (done)->
-            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
-                expect(p).to.not.be.undefined
-                expect(p).to.respondTo('on')
-                done()
+        describe 'call to bundle', ->
 
-        it 'when its finished it emits an "end" event', (done)->
-            endEventHandler = sinon.spy()
+            it 'returns an the package directly', (done)->
+                p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
+                    expect(p).to.not.be.undefined
+                    done()
 
-            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
-                endEventHandler.should.have.been.calledOnce
-                done()            
+            it 'returns the package also via the callback', (done)->
+                p = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,pkg)->
+                    pkg.should.equal(p)
+                    done()                            
 
-            p.on 'end', endEventHandler
+            it 'is an event emitter', ()->
+                p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ()->
+                    expect(p).to.respondTo('on')                   
 
-        it 'emits an "file" event for each file added', (done)->
-            addedEventHandler = sinon.spy()
+        describe 'package events', ->
+            
+            it 'when its finished it emits an "end" event', (done)->                    
+                shouldEmitEvent 'end', done 
 
-            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
-                addedEventHandler.should.have.been.called
-                done()            
+            it 'emits an "file" event for each file added', (done)->
+                shouldEmitEvent 'file', done 
 
-            p.on 'file', addedEventHandler
+            shouldEmitEvent = (name, done)->
+                eventHandler = sinon.spy()
+                
+                p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
+                    eventHandler.should.have.been.called
+                    done()            
 
-        it 'returns the p also via the callback', (done)->
-            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,p)->
-                p.should.equal(p)
-                done()            
+                p.on name, eventHandler
 
         describe 'package properties', ->
 
@@ -81,6 +85,8 @@ describe 'bundling packages', ->
                     p.files.forEach (file)->
                         content = fs.readFileSync file.path
                         file.sha1.should.equal(sha1.calculate(content))
+
+
 
 
 
