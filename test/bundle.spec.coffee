@@ -16,7 +16,7 @@ describe 'bundling packages', ->
         
         describe 'call to bundle', ->
 
-            it 'returns an the package directly', (done)->
+            it 'returns the package directly', (done)->
                 p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
                     expect(p).to.not.be.undefined
                     done()
