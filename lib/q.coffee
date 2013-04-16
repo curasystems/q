@@ -15,27 +15,31 @@ module.exports.InvalidManifestError = class InvalidManifestError extends Error
     constructor:(@details)->
 
 module.exports.bundle = (manifestPath, callback)->
-    bundle = new Bundle
-    async.series [ 
-        (cb)->bundle.fill(manifestPath,cb)
-        (cb)->bundle.save(cb)
-        ],
-        (err)->callback(err,bundle)
-    
-    return bundle       
+    p = new Package
 
-class Bundle extends events.EventEmitter
+    async.series [ 
+        (cb)->p.fill(manifestPath,cb)
+        (cb)->p.save(cb)
+        ],
+        (err)->callback(err,p)
+    
+    return p       
+
+class Package extends events.EventEmitter
 
     constructor: ()->
         @files = []
-        @bundlePath = null
+        @path = null
+        @name = ''
+        @version = ''
+        @description = ''
         
     fill: (@manifestPath, callback)->
 
         fs.exists @manifestPath, (exists)=>
             return callback() if not exists
 
-            @bundlePath = path.dirname(@manifestPath)
+            @path = path.dirname(@manifestPath)
 
             async.waterfall [
                      (cb)=>
@@ -43,7 +47,8 @@ class Bundle extends events.EventEmitter
                     ,(data, cb)=>
                         @_parseManifest(data,cb)
                     ,(manifest, cb)=>
-                        #console.log(manifest)
+                        @_processManifest manifest, (err)->cb(err,manifest)
+                    ,(manifest, cb)=>
                         @_addFiles(manifest, cb)   
                 ],
                 (err)=>
@@ -66,9 +71,18 @@ class Bundle extends events.EventEmitter
         catch e
             callback(new InvalidManifestError(e))
 
+    _processManifest: (manifest, callback)->
+        packageNames = Object.keys manifest
+        
+        @name = packageNames[0]
+        @version = manifest[@name].version
+        @description = manifest[@name].description
+        
+        callback(null)
+
     _addFiles: (manifest,callback)->
 
-        glober = new glob.Glob '**/*', cwd:@bundlePath, debug:no
+        glober = new glob.Glob '**/*', cwd:@path, debug:no
 
         glober.on 'error', callback
         glober.on 'end', (files)=>
@@ -80,7 +94,7 @@ class Bundle extends events.EventEmitter
         
     _addFile: (filePath, callback)->
 
-        fullPath = path.join(@bundlePath,filePath)
+        fullPath = path.join(@path,filePath)
         
         fs.stat fullPath, (err,stats)=>
 

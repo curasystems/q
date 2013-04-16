@@ -15,73 +15,80 @@ describe 'bundling packages', ->
     describe 'bundling test-folder-a', ->
         
         it 'returns an EventEmitter object to track progress', (done)->
-            bundle = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
-                expect(bundle).to.not.be.undefined
-                expect(bundle).to.respondTo('on')
+            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
+                expect(p).to.not.be.undefined
+                expect(p).to.respondTo('on')
                 done()
 
         it 'when its finished it emits an "end" event', (done)->
             endEventHandler = sinon.spy()
 
-            bundle = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
+            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
                 endEventHandler.should.have.been.calledOnce
                 done()            
 
-            bundle.on 'end', endEventHandler
+            p.on 'end', endEventHandler
 
         it 'emits an "file" event for each file added', (done)->
             addedEventHandler = sinon.spy()
 
-            bundle = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
+            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
                 addedEventHandler.should.have.been.called
                 done()            
 
-            bundle.on 'file', addedEventHandler
+            p.on 'file', addedEventHandler
 
-        it 'returns the bundle also via the callback', (done)->
-            bundleReturned = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,bundle)->
-                bundleReturned.should.equal(bundle)
+        it 'returns the p also via the callback', (done)->
+            pReturned = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,p)->
+                pReturned.should.equal(p)
                 done()            
 
-        describe 'files in bundle', ->
+        describe 'p properties', ->
 
-            bundle = null
+            p = null
 
             beforeEach (done)->
-                bundle = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err)->
+                p = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err)->
                     done()
-                
-            it 'stored in files property', ()->
-                bundle.files.should.not.be.empty
-
-            it 'contains files from subfolders too ', ()->
-                atLeastOneFileInSubdirectory = no
-                
-                bundle.files.forEach (file)->
-                    if file.name.indexOf('/')>0 
-                        atLeastOneFileInSubdirectory = yes
-                
-                atLeastOneFileInSubdirectory.should.be.true
-        
-            it 'has some properties describing the file', ()->                
-                bundle.files.forEach (file)->
-                    file.should.have.keys ['name','sha1','path']
-
-            it 'path is directly resolvable', ()->                
-                bundle.files.forEach (file)->
-                    file.should.have.keys ['name','sha1','path']    
-
-            it 'contains the hex digest sha1 of the file', ()->
-                
-                bundle.files.forEach (file)->
-                    content = fs.readFileSync file.path
-                    file.sha1.should.equal(sha1.calculate(content))
-
-
-
             
+            it 'knows the name of the package', -> p.name.should.equal 'my-package'
+            it 'knows the version of the package', -> p.version.should.equal '0.1.0'
+            it 'knows the description of the package', -> p.description.should.equal 'My Description'
 
+            describe 'files in package', ->
+    
+                it 'stored in files property', ()->
+                    p.files.should.not.be.empty
 
-
+                it 'contains files from subfolders too ', ()->
+                    atLeastOneFileInSubdirectory = no
+                    
+                    p.files.forEach (file)->
+                        if file.name.indexOf('/')>0 
+                            atLeastOneFileInSubdirectory = yes
+                    
+                    atLeastOneFileInSubdirectory.should.be.true
             
+                it 'has some properties describing the file', ()->                
+                    p.files.forEach (file)->
+                        file.should.have.keys ['name','sha1','path']
+
+                it 'path is directly resolvable', ()->                
+                    p.files.forEach (file)->
+                        file.should.have.keys ['name','sha1','path']    
+
+                it 'contains the hex digest sha1 of the file', ()->                
+                    p.files.forEach (file)->
+                        content = fs.readFileSync file.path
+                        file.sha1.should.equal(sha1.calculate(content))
+
+
+
+
+
+                
+
+
+
+                
 
