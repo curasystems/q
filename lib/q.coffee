@@ -16,6 +16,9 @@ module.exports.InvalidManifestError = class InvalidManifestError extends Error
     constructor:(@details)->
 
 module.exports.bundle = (manifestPath, callback)->
+
+    manifestPath = path.normalize(manifestPath)
+
     p = new Package
 
     async.series [ 
@@ -34,6 +37,7 @@ class Package extends events.EventEmitter
         @name = ''
         @version = ''
         @description = ''
+        @manifestPath = ''
         
     fill: (@manifestPath, callback)->
 
@@ -121,4 +125,9 @@ class Package extends events.EventEmitter
                 callback()
 
     save: (callback)->
+
+        qCacheDirectoryPath = path.join @path, '.q'
+
         callback()
+
+

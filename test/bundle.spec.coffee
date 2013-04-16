@@ -1,6 +1,10 @@
 q = require '..'
+fs = require 'fs'
+path = require 'path'
+
 {expect, sinon} = require './testing'
 sha1 = require '../lib/sha1'
+
 
 describe 'bundling packages', ->
 
@@ -47,55 +51,52 @@ describe 'bundling packages', ->
 
                 p.on name, eventHandler
 
-        describe 'package properties', ->
+        describe 'after bundle is completed', ->
 
             p = null
 
             beforeEach (done)->
                 p = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err)->
                     done()
-            
-            it 'knows the name of the package', -> p.name.should.equal 'my-package'
-            it 'knows the version of the package', -> p.version.should.equal '0.1.0'
-            it 'knows the description of the package', -> p.description.should.equal 'My Description'
 
-            describe 'files in package', ->
-    
-                it 'stored in files property', ()->
-                    p.files.should.not.be.empty
-
-                it 'contains files from subfolders too ', ()->
-                    atLeastOneFileInSubdirectory = no
-                    
-                    p.files.forEach (file)->
-                        if file.name.indexOf('/')>0 
-                            atLeastOneFileInSubdirectory = yes
-                    
-                    atLeastOneFileInSubdirectory.should.be.true
-            
-                it 'has some properties describing the file', ()->                
-                    p.files.forEach (file)->
-                        file.should.have.keys ['name','sha1','path']
-
-                it 'path is directly resolvable', ()->                
-                    p.files.forEach (file)->
-                        file.should.have.keys ['name','sha1','path']    
-
-                it 'contains the hex digest sha1 of the file', ()->                
-                    p.files.forEach (file)->
-                        content = fs.readFileSync file.path
-                        file.sha1.should.equal(sha1.calculate(content))
-
-
-
-
-
-
-
-
+            describe 'package has properties', ->
                 
+                it 'knows the name of the package', -> p.name.should.equal 'my-package'
+                it 'knows the version of the package', -> p.version.should.equal '0.1.0'
+                it 'knows the description of the package', -> p.description.should.equal 'My Description'
+                it 'has a path where the directory root is', -> p.path.should.equal path.normalize("#{__dirname}/test-folder-a")
+                it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize("#{__dirname}/test-folder-a/q.manifest")
+                it 'has a cachePath where the package is cached', -> p.cachePath.should.not.be.empty
 
+                describe 'files in package', ->
+        
+                    it 'stored in files property', ()->
+                        p.files.should.not.be.empty
 
-
+                    it 'contains files from subfolders too ', ()->
+                        atLeastOneFileInSubdirectory = no
+                        
+                        p.files.forEach (file)->
+                            if file.name.indexOf('/')>0 
+                                atLeastOneFileInSubdirectory = yes
+                        
+                        atLeastOneFileInSubdirectory.should.be.true
                 
+                    it 'has some properties describing the file', ()->                
+                        p.files.forEach (file)->
+                            file.should.have.keys ['name','sha1','path']
 
+                    it 'path is directly resolvable', ()->                
+                        p.files.forEach (file)->
+                            file.should.have.keys ['name','sha1','path']    
+
+                    it 'contains the hex digest sha1 of the file', ()->                
+                        p.files.forEach (file)->
+                            content = fs.readFileSync file.path
+                            file.sha1.should.equal(sha1.calculate(content))
+
+            describe 'package saved', ->
+
+
+                #it 'saves the package in a folder called .q next to the q.manifest', ->
+                #    fs.statSync ''
