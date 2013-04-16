@@ -6,6 +6,7 @@ events = require('events')
 async = require('async')
 yaml = require('js-yaml')
 glob = require('glob')
+semver = require('semver')
 
 #_ = require('underscore')
 #archiver = require('archiver')
@@ -61,7 +62,6 @@ class Package extends events.EventEmitter
     
     _parseManifest: (data, callback)->
         try
-
             manifest = yaml.load(data)
 
             if manifest==null
@@ -72,12 +72,20 @@ class Package extends events.EventEmitter
             callback(new InvalidManifestError(e))
 
     _processManifest: (manifest, callback)->
+        
         packageNames = Object.keys manifest
         
         @name = packageNames[0]
         @version = manifest[@name].version
         @description = manifest[@name].description
-        
+
+        if not @name 
+            return callback(new InvalidManifestError("missing package name"))
+        if not semver.valid(@version)
+            return callback(new InvalidManifestError("invalid version in package => #{@name}/version = '#{@version}'"))
+        if not @description
+            return callback(new InvalidManifestError("package must have a description"))
+
         callback(null)
 
     _addFiles: (manifest,callback)->

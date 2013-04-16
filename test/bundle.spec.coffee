@@ -43,7 +43,7 @@ describe 'bundling packages', ->
                 pReturned.should.equal(p)
                 done()            
 
-        describe 'p properties', ->
+        describe 'package properties', ->
 
             p = null
 
