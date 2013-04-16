@@ -1,5 +1,6 @@
 q = require '..'
 {expect, sinon} = require './testing'
+sha1 = require '../lib/sha1'
 
 describe 'bundling packages', ->
 
@@ -37,17 +38,48 @@ describe 'bundling packages', ->
 
             bundle.on 'file', addedEventHandler
 
-        it 'the bundle is also returned to the callback', (done)->
-            q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,bundle)->
-                bundle.files.should.not.be.empty
-                done()            
-
-        it 'the bundle is also returned to the callback', (done)->
+        it 'returns the bundle also via the callback', (done)->
             bundleReturned = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,bundle)->
                 bundleReturned.should.equal(bundle)
                 done()            
 
+        describe 'files in bundle', ->
 
+            bundle = null
+
+            beforeEach (done)->
+                bundle = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err)->
+                    done()
+                
+            it 'stored in files property', ()->
+                bundle.files.should.not.be.empty
+
+            it 'contains files from subfolders too ', ()->
+                atLeastOneFileInSubdirectory = no
+                
+                bundle.files.forEach (file)->
+                    if file.name.indexOf('/')>0 
+                        atLeastOneFileInSubdirectory = yes
+                
+                atLeastOneFileInSubdirectory.should.be.true
+        
+            it 'has some properties describing the file', ()->                
+                bundle.files.forEach (file)->
+                    file.should.have.keys ['name','sha1','path']
+
+            it 'path is directly resolvable', ()->                
+                bundle.files.forEach (file)->
+                    file.should.have.keys ['name','sha1','path']    
+
+            it 'contains the hex digest sha1 of the file', ()->
+                
+                bundle.files.forEach (file)->
+                    content = fs.readFileSync file.path
+                    file.sha1.should.equal(sha1.calculate(content))
+
+
+
+            
 
 
 
