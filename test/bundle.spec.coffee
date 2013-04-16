@@ -28,4 +28,28 @@ describe 'bundling packages', ->
 
             bundle.on 'end', endEventHandler
 
+        it 'emits an "file" event for each file added', (done)->
+            addedEventHandler = sinon.spy()
+
+            bundle = q.bundle "#{__dirname}/test-folder-a/q.manifest", ->
+                addedEventHandler.should.have.been.called
+                done()            
+
+            bundle.on 'file', addedEventHandler
+
+        it 'the bundle is also returned to the callback', (done)->
+            q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,bundle)->
+                bundle.files.should.not.be.empty
+                done()            
+
+        it 'the bundle is also returned to the callback', (done)->
+            bundleReturned = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,bundle)->
+                bundleReturned.should.equal(bundle)
+                done()            
+
+
+
+
+
+            
 

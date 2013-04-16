@@ -1,10 +1,12 @@
-#path = require('path')
+path = require('path')
 fs = require('fs')
 util = require('util')
 events = require('events')
 
 async = require('async')
 yaml = require('js-yaml')
+glob = require('glob')
+
 #_ = require('underscore')
 #archiver = require('archiver')
 #sha1 = require('./sha1')
@@ -19,25 +21,29 @@ module.exports.bundle = (manifestPath, callback)->
 
 class Bundle extends events.EventEmitter
 
-    fill: (manifestPath, callback)->
+    constructor: ()->
+        @files = []
+        @bundlePath = null
 
-        fs.exists manifestPath, (exists)=>
+    fill: (@manifestPath, callback)->
+
+        fs.exists @manifestPath, (exists)=>
             return callback() if not exists
+
+            @bundlePath = path.dirname(@manifestPath)
 
             async.waterfall [
                      (cb)=>
-                         @_readManifest(manifestPath,cb)
+                         @_readManifest(@manifestPath,cb)
                     ,(data, cb)=>
                         @_parseManifest(data,cb)
                     ,(manifest, cb)=>
                         #console.log(manifest)
-                        @_createFileListing(manifest, cb)                      
-                    ,(listing, cb)=>
-                        cb()
+                        @_addFiles(manifest, cb)   
                 ],
                 (err)=>
                     @emit 'end'
-                    callback(err)
+                    callback(err, this)
 
 
     _readManifest: (manifestPath, callback)->
@@ -55,5 +61,13 @@ class Bundle extends events.EventEmitter
         catch e
             callback(new InvalidManifestError(e))
 
-    _createFileListing: (manifest,callback)->
-        callback(null,null)
+    _addFiles: (manifest,callback)->
+
+        glober = new glob.Glob '*', cwd:@bundlePath, debug:no
+
+        glober.on 'match', (file)=>
+            @emit 'file', file
+        glober.on 'error', callback
+        glober.on 'end', (files)=>
+            @files = files
+            callback(null,files)
