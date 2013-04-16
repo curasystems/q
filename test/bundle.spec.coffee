@@ -39,8 +39,8 @@ describe 'bundling packages', ->
             p.on 'file', addedEventHandler
 
         it 'returns the p also via the callback', (done)->
-            pReturned = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,p)->
-                pReturned.should.equal(p)
+            p = q.bundle "#{__dirname}/test-folder-a/q.manifest", (err,p)->
+                p.should.equal(p)
                 done()            
 
         describe 'package properties', ->
@@ -81,6 +81,7 @@ describe 'bundling packages', ->
                     p.files.forEach (file)->
                         content = fs.readFileSync file.path
                         file.sha1.should.equal(sha1.calculate(content))
+
 
 
 
