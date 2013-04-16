@@ -1,0 +1,30 @@
+mcp-server-web:
+    tags: ['service']
+    description: Web Server 
+    # version is implicit when package.json is present
+    #version: 0.1.0
+    # runtime is implicit when package.json is present
+    #runtime:
+    #    name: node
+    #    version: ~0.10
+    #    exec: node $startFile
+    # declare any files that should be externally editable or visible
+    # default path is directory where yaml resides
+    # path: .        
+    # everything from .gitignore is excluded by default 
+    # exclude: ['$gitignore']
+    include: ['node_modules']
+    files:
+        config: settings.yaml
+        log: log.json
+    
+        # the default configuration used in the settings.yml file
+        # options:
+        #    endpoints:
+        #        name: http
+        #        port: 80
+        #        host: 0.0.0.0
+            
+        
+
+    

@@ -1,0 +1,12 @@
+dicomserver:
+    description: Dicom Store SCP Server
+    #version is implicit from exec file version by default
+    #version: 0.2.0
+    path: build/Release
+    tags: ['service']
+    runtime:
+        name: .net
+        exec: server.exe    
+    files:
+        config: server.yaml
+        log: ae.yaml

@@ -1,90 +1,59 @@
-path = require('path')
+#path = require('path')
 fs = require('fs')
 util = require('util')
-zlib = require('zlib')
-Buffer = require('buffer').Buffer
+events = require('events')
 
-_ = require('underscore')
-Zip = require('node-native-zip')
-folder = require('./folder')
-sha1 = require('./sha1')
+async = require('async')
+yaml = require('js-yaml')
+#_ = require('underscore')
+#archiver = require('archiver')
+#sha1 = require('./sha1')
 
-module.exports.bundle = (sourceDir, cb)->
-    (new Q()).bundle(sourceDir, cb)
+module.exports.InvalidManifestError = class InvalidManifestError extends Error
+    constructor:(@details)->
 
-class Q
+module.exports.bundle = (manifestPath, callback)->
+    bundle = new Bundle
+    bundle.fill(manifestPath,callback)
+    return bundle       
 
-    DEFAULT_EXTENSION = '.gz-pkg'
+class Bundle extends events.EventEmitter
 
-    constructor:()->
+    fill: (manifestPath, callback)->
 
-        @ignore = [/^.*\.gz-pkg$/]
+        fs.exists manifestPath, (exists)=>
+            return callback() if not exists
 
-    bundle:(sourceDir)->
-        targetDir = process.cwd()
-        console.log("creating package from path: #{sourceDir} @ #{targetDir} ...")
-        
-        @_createPackageFromFolder sourceDir, targetDir, (err, packageFile)->
-            console.log "Created package #{packageFile}."
-
-    _createPackageFromFolder: (sourceDir, targetDir, callback)->
-
-        @_createPackageListing sourceDir, (err, listingHash, listing)=>
-            return callback(err) if err
-
-            targetPackagePath = path.join(targetDir, listingHash + DEFAULT_EXTENSION)
-            @_writePackageToFile listing, targetPackagePath
-
-            callback(err, targetPackagePath)
-
-     _createPackageListing: (sourceDir, callback) ->
-
-        mapFile = (filePath, stats, callback) =>
-          
-            if( excludeFile(filePath) )
-                return callback()
-            else
-                fileStream = fs.createReadStream(filePath)
-
-                sha1.calculate fileStream, (err,hash)->
-                    return callback() if(err)
-
-                    callback
-                        name: filePath.replace(sourceDir, "").substr(1)
-                        path: filePath
-                        sha1: hash
-
-        excludeFile = (filePath)=>
-            fileName = path.basename(filePath)
-            for i in @ignore
-                return true if i.test(fileName)
-                
-            return false
-
-        folder.mapAllFiles sourceDir, mapFile, (err,data)->
-
-            return callback(err) if err
-
-            # calculate SHA1 of listing itself
-            namesAndShaOnly = _.map( data, (v)->{name:v.name,sha1:v.sha1} )
-            dataBuffer = new Buffer(JSON.stringify(namesAndShaOnly))          
-            dataSha1 = sha1.calculate(dataBuffer)
-
-            
-            callback(null,dataSha1,data)
+            async.waterfall [
+                     (cb)=>
+                         @_readManifest(manifestPath,cb)
+                    ,(data, cb)=>
+                        @_parseManifest(data,cb)
+                    ,(manifest, cb)=>
+                        #console.log(manifest)
+                        @_createFileListing(manifest, cb)                      
+                    ,(listing, cb)=>
+                        cb()
+                ],
+                (err)=>
+                    @emit 'end'
+                    callback(err)
 
 
-    _writePackageToFile: (listing, targetPackagePath)->
-
-        archive = new Zip()
+    _readManifest: (manifestPath, callback)->
+        fs.readFile manifestPath, encoding:'utf8', callback
     
-        # add the files to the zip
-        archive.addFiles listing, (err) ->
-            return callback(err)  if err
-            
-            compressionStream = zlib.createGzip()
-            targetFileStream = fs.createWriteStream(targetPackagePath)
+    _parseManifest: (data, callback)->
+        try
 
-            compressionStream.pipe(targetFileStream)
-            compressionStream.write(archive.toBuffer())
-            #targetFileStream.write(archive.toBuffer())
+            manifest = yaml.load(data)
+
+            if manifest==null
+                callback(new InvalidManifestError("Could not parse manifest"))
+            else
+                callback(null, manifest)            
+        catch e
+            callback(new InvalidManifestError(e))
+
+    _createFileListing: (manifest,callback)->
+        callback(null,null)

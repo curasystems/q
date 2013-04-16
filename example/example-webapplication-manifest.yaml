@@ -1,0 +1,35 @@
+client-download:
+    description: Offer users the ability to download clients
+    # Required services
+    tags: ['web-module']
+    # version is taken from package.json by default
+    # version: $package.json('version')
+    dependencies:
+        mcp-server-web: ~0.0.1
+    include: ['node_modules']
+    web-module:
+        alias: ['client','download']
+        auth: ip
+        application: webapp
+        api: yes
+    files:
+        config: settings.yaml
+        log: log.json
+             
+    # options:
+    #     distribution-groups:
+    #         # 'dev' can be any arbitrary name
+    #         -   name: 'dev'
+    #             description: The latest dev release of the client host
+    #             # the client is a package uuid to distribute to clients
+    #             client: $packageService.find('dev:mcp-client@latest')
+    #             include:
+    #                 - 192.168.0.1-192.168.0.255
+    #                 - 127.0.0.1
+    #                 - OU=admins
+    #             exclude:
+    #                 # demo machine
+    #                 - 192.168.0.12
+    #         -   name: 'stable'
+    #             description: The latest stable release for general distribution
+    #             client: $packageService.find('stable:mcp-client@latest')
