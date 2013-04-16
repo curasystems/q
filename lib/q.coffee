@@ -28,7 +28,7 @@ module.exports.bundle = (manifestPath, callback)->
     if not manifestPath
         throw new ArgumentError("missing path to manifest")
 
-    p = new Package
+    p = new PackageBundler
 
     async.series [ 
         (cb)->p.create(manifestPath,cb)
@@ -38,12 +38,25 @@ module.exports.bundle = (manifestPath, callback)->
     
     return p       
 
-module.exports.extract = (packagePath, target, callback)->
+module.exports.extract = (packagePath, targetDir, callback)->
+
+    if not packagePath
+        throw new ArgumentError("packagePath is required")
+
+    e = new PackageExtractor(packagePath)
+    e.extract(targetDir, callback)
+
+class PackageExtractor
+
+    constructor: (@packagePath)->
+    extract: (@targetDir,callback)->
+        fs.exists @targetDir, (exists)->
+            return callback(new ArgumentError("targetDir must not exist yet")) if exists 
 
 
 
 # Classes
-class Package extends events.EventEmitter
+class PackageBundler extends events.EventEmitter
 
     constructor: ()->
         @name = null
