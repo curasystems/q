@@ -32,11 +32,15 @@ module.exports.bundle = (manifestPath, callback)->
 
     async.series [ 
         (cb)->p.create(manifestPath,cb)
-        (cb)->p.save(cb)
+        (cb)->p.saveToCache(cb)
         ],
         (err)->callback(err,p)
     
     return p       
+
+module.exports.extract = (packagePath, target, callback)->
+
+
 
 # Classes
 class Package extends events.EventEmitter
@@ -154,7 +158,7 @@ class Package extends events.EventEmitter
         
         cb(null, @uid)        
 
-    save: (callback)->
+    saveToCache: (callback)->
 
         @cachePath = @_buildCachePath()
         mkdirp path.dirname(@cachePath), (err)=>

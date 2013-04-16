@@ -115,7 +115,7 @@ describe 'bundling packages', ->
                 it 'the package content is stored in the cache folder in git like structure', ->
                     p.cachePath.should.equal buildCachePath()
 
-                it 'the package content is stored in the cache folder in git like structure', ->
+                it 'the package content file is written', ->
                     stats = fs.statSync buildCachePath()
                     stats.isFile().should.be.true
 
