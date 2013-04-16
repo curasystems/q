@@ -1,5 +1,6 @@
 q = require '..'
 fs = require 'fs'
+wrench = require 'wrench'
 path = require 'path'
 
 {expect, sinon} = require './testing'
@@ -18,28 +19,28 @@ describe 'bundling packages', ->
 
     describe 'bundling test-folder-a', ->
         
-        TEST_FOLDER_A_MANIFEST = "#{__dirname}/test-folder-a/q.manifest"
-        TEST_FOLDER_A = path.dirname( TEST_FOLDER_A_MANIFEST )
+        TEST_FOLDER_MANIFEST = "#{__dirname}/test-folder-a/q.manifest"
+        TEST_FOLDER = path.dirname( TEST_FOLDER_MANIFEST )
 
-        Q_CACHE_FOLDER = "#{TEST_FOLDER_A}/.q"
+        Q_CACHE_FOLDER = "#{TEST_FOLDER}/.q"
 
-        beforeEach (done)->
-            fs.rmdir Q_CACHE_FOLDER, ()->done()
+        beforeEach ()->
+            wrench.rmdirSyncRecursive Q_CACHE_FOLDER if fs.existsSync Q_CACHE_FOLDER
 
         describe 'call to bundle', ->
 
             it 'returns the package directly', (done)->
-                p = q.bundle TEST_FOLDER_A_MANIFEST, ->
+                p = q.bundle TEST_FOLDER_MANIFEST, ->
                     expect(p).to.not.be.undefined
                     done()
 
             it 'returns the package also via the callback', (done)->
-                p = q.bundle TEST_FOLDER_A_MANIFEST, (err,pkg)->
+                p = q.bundle TEST_FOLDER_MANIFEST, (err,pkg)->
                     pkg.should.equal(p)
                     done()                            
 
             it 'is an event emitter', ()->
-                p = q.bundle TEST_FOLDER_A_MANIFEST, ()->
+                p = q.bundle TEST_FOLDER_MANIFEST, ()->
                     expect(p).to.respondTo('on')                   
 
         describe 'package events', ->
@@ -53,7 +54,7 @@ describe 'bundling packages', ->
             shouldEmitEvent = (name, done)->
                 eventHandler = sinon.spy()
                 
-                p = q.bundle TEST_FOLDER_A_MANIFEST, ->
+                p = q.bundle TEST_FOLDER_MANIFEST, ->
                     eventHandler.should.have.been.called
                     done()            
 
@@ -64,7 +65,7 @@ describe 'bundling packages', ->
             p = null
 
             beforeEach (done)->
-                p = q.bundle TEST_FOLDER_A_MANIFEST, (err)->
+                p = q.bundle TEST_FOLDER_MANIFEST, (err)->
                     done()
 
             describe 'package has properties', ->
@@ -73,9 +74,9 @@ describe 'bundling packages', ->
                 it 'knows the version of the package', -> p.version.should.equal '0.1.0'
                 it 'knows the description of the package', -> p.description.should.equal 'My Description'
                 it 'has a path where the directory root is', -> p.path.should.equal path.normalize("#{__dirname}/test-folder-a")
-                it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize(TEST_FOLDER_A_MANIFEST)
+                it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize(TEST_FOLDER_MANIFEST)
                 it 'has a cachePath where the package is cached', -> p.cachePath.should.not.be.empty
-                it 'has a package uid which identifies the package', -> p.uid.should.not.be.empty
+                it 'has a package uid which identifies the package and its contents', -> p.uid.should.equal('e489d730a49dfa7c9896f9bab4537f3f78010917')
 
                 describe 'files in package', ->
         
@@ -112,7 +113,13 @@ describe 'bundling packages', ->
                     stats.isDirectory().should.be.true
 
                 it 'the package content is stored in the cache folder in git like structure', ->
+                    p.cachePath.should.equal buildCachePath()
 
+                it 'the package content is stored in the cache folder in git like structure', ->
+                    stats = fs.statSync buildCachePath()
+                    stats.isFile().should.be.true
+
+                buildCachePath = ()->
                     firstDir = 'objects'
                     secondDir = p.uid.substr 0,2
                     filename = p.uid.substr(2) + '.pkg'
@@ -120,9 +127,6 @@ describe 'bundling packages', ->
                     (p.uid + '.pkg').should.equal( secondDir + filename )
 
                     packageFilePath = path.join Q_CACHE_FOLDER, firstDir, secondDir, filename
-
-                    stats = fs.statSync packageFilePath
-                    stats.isFile().should.be.true
                     
         describe 'exclusions', ->
         
@@ -130,7 +134,7 @@ describe 'bundling packages', ->
 
                 createQCacheFolderWithContent ->
 
-                    q.bundle TEST_FOLDER_A_MANIFEST, (err, p)->            
+                    q.bundle TEST_FOLDER_MANIFEST, (err, p)->            
                         includesAFileFromQCacheFolder = no
                         
                         p.files.forEach (file)->
@@ -142,6 +146,7 @@ describe 'bundling packages', ->
 
             createQCacheFolderWithContent = (done)->
                 tempFile = path.join Q_CACHE_FOLDER, 'temp.txt'
+                fs.mkdirSync Q_CACHE_FOLDER
                 fs.writeFileSync tempFile, "dummy"    
                 setTimeout done,50
 

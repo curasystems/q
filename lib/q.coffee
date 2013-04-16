@@ -1,5 +1,7 @@
+assert = require('assert')
 path = require('path')
 fs = require('fs')
+mkdirp = require('mkdirp')
 util = require('util')
 events = require('events')
 
@@ -113,7 +115,8 @@ class Package extends events.EventEmitter
         glober.on 'error', callback
         glober.on 'end', (files)=>
 
-            async.eachLimit files, 8, (file,cb)=>
+            @i = 0
+            async.eachSeries files, (file,cb)=>
                     @_addFile(file,cb)
                 , callback
         
@@ -132,9 +135,11 @@ class Package extends events.EventEmitter
                 sha1: null
 
             sha1.calculate fs.createReadStream(file.path, encoding:'utf8'), (err,sha1)=>
+
                 file.sha1 = sha1
                 @files.push(file)
                 @emit 'file', file
+
                 callback()
 
     _calculateUid: (cb)->
@@ -146,17 +151,28 @@ class Package extends events.EventEmitter
 
         sha1OfListing = sha1.calculate new Buffer(JSON.stringify(listing))
         @uid = sha1OfListing
+        
         cb(null, @uid)        
 
     save: (callback)->
 
-        cacheDirectoryPath = path.join @path, '.q'
-
-        fs.mkdir cacheDirectoryPath, (err)=>
-
+        @cachePath = @_buildCachePath()
+        mkdirp path.dirname(@cachePath), (err)=>
             return callback(err) if err?.errno is not 47
 
-            @cachePath = path.join cacheDirectoryPath, @uid
-            callback(null, @cachePath)
+            fs.writeFile @cachePath, "DUMMY", (err)->
+                callback(err, @cachePath)
 
+    _buildCachePath: ()->       
+        cacheDirectoryPath = path.join @path, '.q'
+        return path.join cacheDirectoryPath, @_buildPackageFilePathInCache()
+                    
+    _buildPackageFilePathInCache: ()->
 
+        firstDir = 'objects'
+        secondDir = @uid.substr 0,2
+        filename = @uid.substr(2) + '.pkg'
+
+        assert @uid + '.pkg' == secondDir + filename
+
+        return path.join firstDir, secondDir, filename
