@@ -21,10 +21,10 @@ A manifest is required for telling q what the package is contained in the packag
 
 **Minimal Example**: q.manifest
 
-    my-service:
-        description: A little service that does not do much
-        version: 0.2.0
-        path: build/Release
+    name: my-service
+    description: A little service that does not do much
+    version: 0.2.0
+    path: build/Release
 
 The preceding manifest describes a package called 'my-service' with version 0.2.0. It includes all files in the folder build/Release relative to the manifest file itself.
 
@@ -34,31 +34,35 @@ The preceding manifest describes a package called 'my-service' with version 0.2.
 
 Some fields in the manifest have defaults, so the example above could be rewritten as:
 
-    my-service:
-        description: A little service that does not do much
+    --- EMPTY FILE ---
+
+**name**: defaults to value from package.json when present or the name of the exe (spaces replaces by '-')
+
+**description**: defaults to value from package.json when present
 
 **version**: defaults to the version in a package.json when present next to the manifest or to the FileVersion of the only exe in the root path of the module. If the example above contained exactly one EXE in build/Release it would take its version. 
 
-**path**: defaults to the manifest path
+**path**: defaults to the manifest path.
+
 
 ### Full example
 
-    my-module:
-        description: A little module others can use
-        version: 2.0
-        path: .
-        include: ['node_modules']
-        dependencies:
-            mcp-server-web: ~0.0.1
-        tags: ['web-module']
-        web-module:
-            alias: ['client','download']
-            auth: ip
-            application: webapp
-            api: yes
-        files:
-            config: settings.yaml
-            log: log.json
+    name: my-module
+    description: A little module others can use
+    version: 2.0
+    path: .
+    include: ['node_modules']
+    dependencies:
+        mcp-server-web: ~0.0.1
+    tags: ['web-module']
+    web-module:
+        alias: ['client','download']
+        auth: ip
+        application: webapp
+        api: yes
+    files:
+        config: settings.yaml
+        log: log.json
 
 This manifest describes another module with some custom fields. The only fields relevant to q are *description*,*version*,*path*,*include*.
 

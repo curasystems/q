@@ -164,7 +164,7 @@ class PackageBundler extends events.EventEmitter
         listing = 
             name: @name
             version: @version
-            files: @files
+            files: ({name,sha1} for f in @files)
 
         sha1OfListing = sha1.calculate new Buffer(JSON.stringify(listing))
         @uid = sha1OfListing
