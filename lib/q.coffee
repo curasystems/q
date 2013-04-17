@@ -10,7 +10,7 @@ yaml = require('js-yaml')
 glob = require('glob')
 semver = require('semver')
 
-#_ = require('underscore')
+_ = require('underscore')
 #archiver = require('archiver')
 sha1 = require('./sha1')
 
@@ -58,7 +58,13 @@ class PackageExtractor
 # Classes
 class PackageBundler extends events.EventEmitter
 
-    constructor: ()->
+    DEFAULT_OPTIONS = 
+        manifestName: 'q.manifest'
+
+    constructor: (options={})->
+
+        @options = _.defaults(options, DEFAULT_OPTIONS)
+
         @name = null
         @version = null
         @description = null
@@ -67,10 +73,10 @@ class PackageBundler extends events.EventEmitter
         @manifestPath = null
         @cachePath = null
         
-    create: (manifestPath, callback)->
+    create: (folderPath, callback)->
 
-        @manifestPath = path.normalize(manifestPath)
-    
+        @manifestPath = path.normalize path.join(folderPath, @options.manifestName)
+        
         fs.exists @manifestPath, (exists)=>
             return callback() if not exists
 
@@ -109,11 +115,9 @@ class PackageBundler extends events.EventEmitter
 
     _processManifest: (manifest, callback)->
         
-        packageNames = Object.keys manifest
-        
-        @name = packageNames[0]
-        @version = manifest[@name].version
-        @description = manifest[@name].description
+        @name = manifest.name
+        @version = manifest.version
+        @description = manifest.description
 
         if not @name 
             return callback(new InvalidManifestError("missing package name"))

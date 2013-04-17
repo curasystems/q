@@ -9,19 +9,17 @@ sha1 = require '../lib/sha1'
 
 describe 'bundling packages', ->
 
-    it 'requires a path to a manifest and a callback', ->
+    it 'requires a path to a folder and a callback', ->
         expect( ()->q.bundle() ).to.throw()
 
-    it 'requires the manifest path to be parsable yaml', (done)->
-        q.bundle "#{__dirname}/test-folder-a/q.invalid-manifest", (err)->
+    it 'requires a folder path with a parsable yaml', (done)->
+        q.bundle "#{__dirname}/test-folder-b-invalid", (err)->
             expect(err).to.be.instanceof(q.InvalidManifestError)
             done()
 
     describe 'bundling test-folder-a', ->
         
-        TEST_FOLDER_MANIFEST = "#{__dirname}/test-folder-a/q.manifest"
-        TEST_FOLDER = path.dirname( TEST_FOLDER_MANIFEST )
-
+        TEST_FOLDER = "#{__dirname}/test-folder-a"
         Q_CACHE_FOLDER = "#{TEST_FOLDER}/.q"
 
         beforeEach ()->
@@ -30,17 +28,17 @@ describe 'bundling packages', ->
         describe 'call to bundle', ->
 
             it 'returns the package directly', (done)->
-                p = q.bundle TEST_FOLDER_MANIFEST, ->
+                p = q.bundle TEST_FOLDER, ->
                     expect(p).to.not.be.undefined
                     done()
 
             it 'returns the package also via the callback', (done)->
-                p = q.bundle TEST_FOLDER_MANIFEST, (err,pkg)->
+                p = q.bundle TEST_FOLDER, (err,pkg)->
                     pkg.should.equal(p)
                     done()                            
 
             it 'is an event emitter', ()->
-                p = q.bundle TEST_FOLDER_MANIFEST, ()->
+                p = q.bundle TEST_FOLDER, ()->
                     expect(p).to.respondTo('on')                   
 
         describe 'package events', ->
@@ -54,7 +52,7 @@ describe 'bundling packages', ->
             shouldEmitEvent = (name, done)->
                 eventHandler = sinon.spy()
                 
-                p = q.bundle TEST_FOLDER_MANIFEST, ->
+                p = q.bundle TEST_FOLDER, ->
                     eventHandler.should.have.been.called
                     done()            
 
@@ -65,7 +63,7 @@ describe 'bundling packages', ->
             p = null
 
             beforeEach (done)->
-                p = q.bundle TEST_FOLDER_MANIFEST, (err)->
+                p = q.bundle TEST_FOLDER, (err)->
                     done()
 
             describe 'package has properties', ->
@@ -74,9 +72,9 @@ describe 'bundling packages', ->
                 it 'knows the version of the package', -> p.version.should.equal '0.1.0'
                 it 'knows the description of the package', -> p.description.should.equal 'My Description'
                 it 'has a path where the directory root is', -> p.path.should.equal path.normalize("#{__dirname}/test-folder-a")
-                it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize(TEST_FOLDER_MANIFEST)
+                it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize path.join(TEST_FOLDER, 'q.manifest')
                 it 'has a cachePath where the package is cached', -> p.cachePath.should.not.be.empty
-                it 'has a package uid which identifies the package and its contents', -> p.uid.should.equal('cbde326042ad441a91685b350f7fbf0820ca31ea')
+                it 'has a package uid which identifies the package and its contents', -> p.uid.should.equal('b74ed98ef279f61233bad0d4b34c1488f8525f27')
 
                 describe 'files in package', ->
         
@@ -134,7 +132,7 @@ describe 'bundling packages', ->
 
                 createQCacheFolderWithContent ->
 
-                    q.bundle TEST_FOLDER_MANIFEST, (err, p)->            
+                    q.bundle TEST_FOLDER, (err, p)->            
                         includesAFileFromQCacheFolder = no
                         
                         p.files.forEach (file)->
