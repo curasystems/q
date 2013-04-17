@@ -76,7 +76,7 @@ describe 'bundling packages', ->
                 it 'has a path where the directory root is', -> p.path.should.equal path.normalize("#{__dirname}/test-folder-a")
                 it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize(TEST_FOLDER_MANIFEST)
                 it 'has a cachePath where the package is cached', -> p.cachePath.should.not.be.empty
-                it 'has a package uid which identifies the package and its contents', -> p.uid.should.equal('e489d730a49dfa7c9896f9bab4537f3f78010917')
+                it 'has a package uid which identifies the package and its contents', -> p.uid.should.equal('cbde326042ad441a91685b350f7fbf0820ca31ea')
 
                 describe 'files in package', ->
         
