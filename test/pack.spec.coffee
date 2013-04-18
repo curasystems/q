@@ -7,17 +7,17 @@ path = require 'path'
 sha1 = require '../lib/sha1'
 
 
-describe 'bundling packages', ->
+describe 'packing folders into packages', ->
 
     it 'requires a path to a folder and a callback', ->
-        expect( ()->q.bundle() ).to.throw()
+        expect( ()->q.pack() ).to.throw()
 
-    it 'requires a folder path with a parsable yaml', (done)->
-        q.bundle "#{__dirname}/test-folder-b-invalid", (err)->
+    it 'requires a folder path with a parsable q.manifest', (done)->
+        q.pack "#{__dirname}/test-folder-b-invalid", (err)->
             expect(err).to.be.instanceof(q.InvalidManifestError)
             done()
 
-    describe 'bundling test-folder-a', ->
+    describe 'packing test-folder-a', ->
         
         TEST_FOLDER = "#{__dirname}/test-folder-a"
         Q_CACHE_FOLDER = "#{TEST_FOLDER}/.q"
@@ -25,20 +25,20 @@ describe 'bundling packages', ->
         beforeEach ()->
             wrench.rmdirSyncRecursive Q_CACHE_FOLDER if fs.existsSync Q_CACHE_FOLDER
 
-        describe 'call to bundle', ->
+        describe 'call to pack', ->
 
             it 'returns the package directly', (done)->
-                p = q.bundle TEST_FOLDER, ->
+                p = q.pack TEST_FOLDER, ->
                     expect(p).to.not.be.undefined
                     done()
 
             it 'returns the package also via the callback', (done)->
-                p = q.bundle TEST_FOLDER, (err,pkg)->
+                p = q.pack TEST_FOLDER, (err,pkg)->
                     pkg.should.equal(p)
                     done()                            
 
             it 'is an event emitter', ()->
-                p = q.bundle TEST_FOLDER, ()->
+                p = q.pack TEST_FOLDER, ()->
                     expect(p).to.respondTo('on')                   
 
         describe 'package events', ->
@@ -52,18 +52,18 @@ describe 'bundling packages', ->
             shouldEmitEvent = (name, done)->
                 eventHandler = sinon.spy()
                 
-                p = q.bundle TEST_FOLDER, ->
+                p = q.pack TEST_FOLDER, ->
                     eventHandler.should.have.been.called
                     done()            
 
                 p.on name, eventHandler
 
-        describe 'after bundle is completed', ->
+        describe 'after pack is completed', ->
 
             p = null
 
             beforeEach (done)->
-                p = q.bundle TEST_FOLDER, (err)->
+                p = q.pack TEST_FOLDER, (err)->
                     done()
 
             describe 'package has properties', ->
@@ -132,7 +132,7 @@ describe 'bundling packages', ->
 
                 createQCacheFolderWithContent ->
 
-                    q.bundle TEST_FOLDER, (err, p)->            
+                    q.pack TEST_FOLDER, (err, p)->            
                         includesAFileFromQCacheFolder = no
                         
                         p.files.forEach (file)->

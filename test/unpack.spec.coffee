@@ -11,10 +11,10 @@ describe 'extracting packages', ->
         wrench.rmdirSyncRecursive TARGET_FOLDER if fs.existsSync TARGET_FOLDER
 
     it 'extract requires a manifest path', ->
-        expect( q.extract ).to.throw(q.ArgumentError)
+        expect( q.unpack ).to.throw(q.ArgumentError)
 
     it 'extract requires the target path to not exist', ->
-        q.extract 'test',"#{__dirname}", (err)->
+        q.unpack 'test',"#{__dirname}", (err)->
             err.should.not.be.null
             
     describe 'given a package', ->
@@ -23,7 +23,7 @@ describe 'extracting packages', ->
         TEST_FOLDER_MANIFEST = "#{__dirname}/test-folder-a/q.manifest"
 
         beforeEach (done)->
-            p = q.bundle TEST_FOLDER_MANIFEST, done
+            p = q.pack TEST_FOLDER_MANIFEST, done
             
 
 
