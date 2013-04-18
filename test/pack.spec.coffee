@@ -1,7 +1,9 @@
 q = require '..'
+
 fs = require 'fs'
-wrench = require 'wrench'
 path = require 'path'
+wrench = require 'wrench'
+unzip = require 'unzip'
 
 {expect, sinon} = require './testing'
 sha1 = require '../lib/sha1'
@@ -116,6 +118,18 @@ describe 'packing folders into packages', ->
                 it 'the package content file is written', ->
                     stats = fs.statSync buildCachePath()
                     stats.isFile().should.be.true
+
+                it 'the package content file is a zip file', (done)->
+
+                    onEntryHandler = sinon.spy()
+
+                    file = fs.createReadStream(buildCachePath()).pipe(unzip.Parse())
+
+                    file.on 'entry', onEntryHandler
+                    file.on 'close', ()->
+                        onEntryHandler.should.have.been.called.once
+                        done()                    
+
 
                 buildCachePath = ()->
                     firstDir = 'objects'

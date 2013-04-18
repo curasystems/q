@@ -3,27 +3,27 @@ wrench = require 'wrench'
 
 {expect} = require './testing'
 
-describe 'extracting packages', ->
+describe 'unpacking packages', ->
   
-    TARGET_FOLDER = "#{__dirname}/test-folder-a-extracted/"
+    TARGET_FOLDER = "#{__dirname}/test-folder-a-unpacked/"
 
     beforeEach ->
         wrench.rmdirSyncRecursive TARGET_FOLDER if fs.existsSync TARGET_FOLDER
 
-    it 'extract requires a manifest path', ->
+    it 'needs two arguments', ->
         expect( q.unpack ).to.throw(q.ArgumentError)
 
-    it 'extract requires the target path to not exist', ->
+    it 'extract requires the target path argument to not exist', ->
         q.unpack 'test',"#{__dirname}", (err)->
             err.should.not.be.null
             
     describe 'given a package', ->
     
         p = null
-        TEST_FOLDER_MANIFEST = "#{__dirname}/test-folder-a/q.manifest"
+        TEST_FOLDER = "#{__dirname}/test-folder-a"
 
         beforeEach (done)->
-            p = q.pack TEST_FOLDER_MANIFEST, done
+            p = q.pack TEST_FOLDER, done
             
 
 

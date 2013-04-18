@@ -2,6 +2,7 @@ assert = require('assert')
 mkdirp = require('mkdirp')
 util = require('util')
 events = require('events')
+lazystream = require('lazystream')
 
 async = require('async')
 yaml = require('js-yaml')
@@ -9,8 +10,10 @@ glob = require('glob')
 semver = require('semver')
 
 _ = require('underscore')
-#archiver = require('archiver')
+archiver = require('archiver')
 sha1 = require('./sha1')
+
+errors = require('./errors')
 
 module.exports = class Packer extends events.EventEmitter
 
@@ -63,11 +66,11 @@ module.exports = class Packer extends events.EventEmitter
             manifest = yaml.load(data)
 
             if manifest==null
-                callback(new InvalidManifestError("Could not parse manifest"))
+                callback(new errors.InvalidManifestError("Could not parse manifest"))
             else
                 callback(null, manifest)            
         catch e
-            callback(new InvalidManifestError(e))
+            callback(new errors.InvalidManifestError(e))
 
     _processManifest: (manifest, callback)->
         
@@ -76,11 +79,11 @@ module.exports = class Packer extends events.EventEmitter
         @description = manifest.description
 
         if not @name 
-            return callback(new InvalidManifestError("missing package name"))
+            return callback(new errors.InvalidManifestError("missing package name"))
         if not semver.valid(@version)
-            return callback(new InvalidManifestError("invalid version in package => #{@name}/version = '#{@version}'"))
+            return callback(new errors.InvalidManifestError("invalid version in package => #{@name}/version = '#{@version}'"))
         if not @description
-            return callback(new InvalidManifestError("package must have a description"))
+            return callback(new errors.InvalidManifestError("package must have a description"))
 
         callback(null)
 
@@ -88,7 +91,6 @@ module.exports = class Packer extends events.EventEmitter
 
         glober = new glob.Glob '**/*', cwd:@path, dot:no, debug:no
 
-        #glober.on 'match', (match)->console.log match
         glober.on 'error', callback
         glober.on 'end', (files)=>
 
@@ -135,10 +137,33 @@ module.exports = class Packer extends events.EventEmitter
 
         @cachePath = @_buildCachePath()
         mkdirp path.dirname(@cachePath), (err)=>
-            return callback(err) if err?.errno is not 47
+            return callback(err) if err #?.errno is not 47
 
-            fs.writeFile @cachePath, "DUMMY", (err)->
-                callback(err, @cachePath)
+            archive = archiver('zip');
+            archive.on 'error', (err)->callback(err)
+
+            output = fs.createWriteStream @cachePath
+            archive.pipe(output)
+            
+            @files.forEach (file)->
+                lazyFileStream = new lazystream.Readable ()->
+                    return fs.createReadStream(file.path)
+                archive.append(lazyFileStream, {name:file.name})
+
+            hadError = no
+
+            archive.finalize (err,written)=>
+                if err 
+                    hadError = yes
+                    return callback(err) 
+                
+            output.on 'close', =>
+                if hadError
+                    fs.unlinkSync @cachePath
+                    return
+
+                callback(null)
+
 
     _buildCachePath: ()->       
         cacheDirectoryPath = path.join @path, '.q'
