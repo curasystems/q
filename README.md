@@ -5,9 +5,12 @@ meta information to a q-server and can download them again.
 
 Upload and download is optimized to transfer binary diffs to a q-server.
 
+
+> **WIP**: This project is still work in progress. Basic operations pack/unpack/verify work fine but it has no command line interface yet
+
 **q** requires a package name, description, version and files to include/exclude. This is defined in the q.manifest.
 
-## Commands
+## Command Line
 
 q --help 
 
@@ -24,9 +27,8 @@ A manifest is required for telling q what the package is contained in the packag
     name: my-service
     description: A little service that does not do much
     version: 0.2.0
-    path: build/Release
-
-The preceding manifest describes a package called 'my-service' with version 0.2.0. It includes all files in the folder build/Release relative to the manifest file itself.
+    
+The preceding manifest describes a package called 'my-service' with version 0.2.0. It includes all files in the folder where q.manifest resides in.
 
 > By default all files matched by .gitignore are not included. If .gitignore excludes node_modules it might be sensible to include the node\_modules folder explicitly using **include: ['node\_modules']**
 
