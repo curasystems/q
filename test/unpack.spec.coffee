@@ -83,3 +83,11 @@ describe 'unpacking packages', ->
                     invalidFile.valid.should.be.false
                     
                     done()
+
+            it 'collects files in the zip that are not part of the listing in an extra property', (done)->
+
+                q.verifyPackage "#{__dirname}/packages/extraFiles.zip", (err,result)->
+                    result.valid.should.be.true
+                    result.extraFiles.should.not.be.empty
+                    
+                    done()                
