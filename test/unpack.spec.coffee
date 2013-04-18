@@ -57,6 +57,17 @@ describe 'unpacking packages', ->
                     entry.autodrain()
 
                 zip.on 'close', ()->done()
-               
-            it.skip 'the unpacked contents can be verified against the package', (done)->
-                q.verify PACKAGE_PATH, TARGET_FOLDER, done
+            
+            it 'a package can be listed but fails when no .q.listing in it', (done)->
+                q.listPackage "#{__dirname}/packages/missingListing.zip", (err,listing)->
+                    err.should.be.instanceof( q.NoListingError )
+                    done()
+            
+            it 'the unpacked contents can be listed', (done)->
+                q.listPackage PACKAGE_PATH, (err,listing)->
+                    expect(err).to.be.null
+                    listing.name.should.equal('my-package')
+                    done()
+            #       
+            #it.only 'the unpacked contents can be verified against the package', (done)->
+            #    q.verify PACKAGE_PATH, TARGET_FOLDER, done

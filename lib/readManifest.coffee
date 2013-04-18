@@ -41,18 +41,3 @@ class ManifestReader
                 callback(null, manifest)            
         catch e
             callback(new errors.InvalidManifestError(e))
-
-    _processManifest: (manifest, callback)->
-        
-        @name = manifest.name
-        @version = manifest.version
-        @description = manifest.description
-
-        if not @name 
-            return callback(new errors.InvalidManifestError("missing package name"))
-        if not semver.valid(@version)
-            return callback(new errors.InvalidManifestError("invalid version in package => #{@name}/version = '#{@version}'"))
-        if not @description
-            return callback(new errors.InvalidManifestError("package must have a description"))
-
-        callback(null)
