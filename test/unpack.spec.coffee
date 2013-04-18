@@ -57,6 +57,8 @@ describe 'unpacking packages', ->
                     entry.autodrain()
 
                 zip.on 'close', ()->done()
+        
+        describe 'packages can be inspected when still packed', ->
             
             it 'a package can be listed but fails when no .q.listing in it', (done)->
                 q.listPackage "#{__dirname}/packages/missingListing.zip", (err,listing)->
