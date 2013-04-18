@@ -1,7 +1,9 @@
 q = require '..'
 
 fs = require 'fs'
+path = require 'path'
 wrench = require 'wrench'
+unzip = require 'unzip'
 
 {expect} = require './testing'
 
@@ -33,8 +35,26 @@ describe 'unpacking packages', ->
                 PACKAGE_PATH = p.cachePath
                 done()
 
-        it 'should create the target folder', (done)->
-            q.unpack PACKAGE_PATH, TARGET_FOLDER, ()->
+        describe 'when unpacking it', ->
+
+            beforeEach (done)->
+                q.unpack PACKAGE_PATH, TARGET_FOLDER, ()->
+                    done()               
+
+            it 'should create the target folder', ->
                 stat = fs.statSync TARGET_FOLDER
                 stat.isDirectory().should.be.true
-                done()
+
+            it 'should contain all the files in the package', (done)->
+
+                zip = fs.createReadStream(PACKAGE_PATH)
+                  .pipe(unzip.Parse())
+                  .on 'entry', (entry) ->
+                    
+                    unpackedPath = path.join(TARGET_FOLDER, entry.path)
+                    fs.existsSync(unpackedPath).should.be.true
+
+                    entry.autodrain()
+
+                zip.on 'close', ()->done()
+               
