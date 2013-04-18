@@ -130,7 +130,6 @@ describe 'packing folders into packages', ->
                         onEntryHandler.should.have.been.called.once
                         done()                    
 
-
                 buildCachePath = ()->
                     firstDir = 'objects'
                     secondDir = p.uid.substr 0,2

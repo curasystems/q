@@ -10,8 +10,11 @@ describe 'unpacking packages', ->
     beforeEach ->
         wrench.rmdirSyncRecursive TARGET_FOLDER if fs.existsSync TARGET_FOLDER
 
-    it 'needs two arguments', ->
-        expect( q.unpack ).to.throw(q.ArgumentError)
+    it 'needs a path to package', ->
+        expect( ()->q.unpack() ).to.throw(q.ArgumentError, /package/)
+
+    it 'needs a path to the target directory', ->
+        expect( ()->q.unpack('package-path') ).to.throw(q.ArgumentError, /target/)
 
     it 'extract requires the target path argument to not exist', ->
         q.unpack 'test',"#{__dirname}", (err)->

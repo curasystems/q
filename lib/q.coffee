@@ -23,19 +23,15 @@ module.exports.pack = (manifestPath, callback)->
     
     return p   
 
-module.exports.extract = (packagePath, targetDir, callback)->
+module.exports.unpack = (packagePath, targetDir, callback)->
 
     if not packagePath
         throw new errors.ArgumentError("packagePath is required")
 
+    if not targetDir
+        throw new errors.ArgumentError("targetDir is required")
+
     e = new Unpacker(packagePath)
     e.unpack(targetDir, callback)
-
-class Unpacker
-
-    constructor: (@packagePath)->
-    extract: (@targetDir,callback)->
-        fs.exists @targetDir, (exists)->
-            return callback(new errors.ArgumentError("targetDir must not exist yet")) if exists 
 
 
