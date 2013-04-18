@@ -21,10 +21,15 @@ describe 'packing folders into packages', ->
 
     describe 'packing folders with a package.json', ->
 
-        it.only 'works and takes name,version,description from the package.json', (done)->
+        it 'works and takes name,version,description from the package.json', (done)->
             q.pack "#{__dirname}/test-folder-node", (err, p)->
                 expect(err).to.be.null
                 p.name.should.equal('test-folder-node')
+                done()
+
+        it 'the manifestPath is still q.manifest if its present', (done)->
+            q.pack "#{__dirname}/test-folder-node", (err, p)->
+                p.manifestPath.should.contain('q.manifest')
                 done()
 
     describe 'packing test-folder-a', ->

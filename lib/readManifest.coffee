@@ -11,44 +11,58 @@ module.exports = (directoryPath, manifestName, callback)->
 
 class ManifestReader
 
-    constructor: (@directoryPath, @manifestName)->        
-        @manifestPath = path.normalize path.join(@directoryPath, @manifestName)
-    
+    constructor: (@directoryPath, @manifestName)->  
+        
+        @manifest = {}
+        @manifestPath = null
+        @qManifestPath = path.normalize path.join(@directoryPath, @manifestName)
+        @packageJsonPath = path.normalize path.join(@directoryPath, 'package.json')
+
     readManifest: (callback)->
 
-        fs.exists @manifestPath, (exists)=>
-            if not exists
-                @_attemptToLoadPackageJson(callback) 
+        fs.exists @packageJsonPath, (exists)=>
+            if exists
+                @_attemptToLoadPackageJson (err)=>
+                    return callback(err) if err
+                    @_loadManifest (err)=>
+                        callback(err, @manifestPath, @manifest)    
             else
-                @_readManifestFile @manifestPath, (err,manifest)=>
-                    callback(err, @manifestPath, manifest)
+                @_loadManifest (err)=>
+                    callback(err, @manifestPath, @manifest)
 
     _attemptToLoadPackageJson: (callback)->
-        packageJsonPath = path.normalize path.join(@directoryPath, 'package.json')    
-        fs.readFile packageJsonPath, encoding:'utf8', (err,content)->
+        
+        fs.readFile @packageJsonPath, encoding:'utf8', (err,content)=>
             return callback(err) if err
 
             packageInfo = JSON.parse(content)
             
-            manifest = {}
-            manifest.name = packageInfo.name
-            manifest.version = packageInfo.version
-            manifest.description = packageInfo.description
+            @manifestPath = @packageJsonPath
+            @manifest.name = packageInfo.name
+            @manifest.version = packageInfo.version
+            @manifest.description = packageInfo.description
 
-            callback(null, packageJsonPath, manifest)
+            callback(null)
 
-    _readManifestFile: (manifestPath, callback)->
-        fs.readFile manifestPath, encoding:'utf8', (err,content)=>
+    _loadManifest: (callback)=>
+        fs.exists @qManifestPath, (exists)=>
+            return callback(null) if not exists
+            @_readManifestFile(callback)
+
+    _readManifestFile: (callback)->
+        fs.readFile @qManifestPath, encoding:'utf8', (err,content)=>
             return callback(err) if err
+            @manifestPath = @qManifestPath            
             @_parseManifest(content,callback)
     
     _parseManifest: (data, callback)->
         try
-            manifest = yaml.load(data)
+            qManifest = yaml.load(data)
 
-            if manifest==null
+            if qManifest==null
                 callback(new errors.InvalidManifestError("Could not parse manifest"))
             else
-                callback(null, manifest)            
+                @manifest = _.defaults @manifest, qManifest
+                callback(null)            
         catch e
             callback(new errors.InvalidManifestError(e))
