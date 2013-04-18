@@ -1,8 +1,9 @@
-async = require('async')
 yaml = require('js-yaml')
 semver = require('semver')
+_ = require('underscore')
 
 errors = require('./errors')
+
 
 module.exports = (directoryPath, manifestName, callback)->
     reader = new ManifestReader(directoryPath, manifestName)
@@ -16,20 +17,30 @@ class ManifestReader
     readManifest: (callback)->
 
         fs.exists @manifestPath, (exists)=>
-            return callback() if not exists
+            if not exists
+                @_attemptToLoadPackageJson(callback) 
+            else
+                @_readManifestFile @manifestPath, (err,manifest)=>
+                    callback(err, @manifestPath, manifest)
 
-            async.waterfall [
-                     (cb)=>
-                         @_readManifestFile(@manifestPath,cb)
-                    ,(data, cb)=>
-                        @_parseManifest(data,cb)
-                  
-                ],
-                (err, manifest)=>
-                    callback(err, manifest)
+    _attemptToLoadPackageJson: (callback)->
+        packageJsonPath = path.normalize path.join(@directoryPath, 'package.json')    
+        fs.readFile packageJsonPath, encoding:'utf8', (err,content)->
+            return callback(err) if err
+
+            packageInfo = JSON.parse(content)
+            
+            manifest = {}
+            manifest.name = packageInfo.name
+            manifest.version = packageInfo.version
+            manifest.description = packageInfo.description
+
+            callback(null, packageJsonPath, manifest)
 
     _readManifestFile: (manifestPath, callback)->
-        fs.readFile manifestPath, encoding:'utf8', callback
+        fs.readFile manifestPath, encoding:'utf8', (err,content)=>
+            return callback(err) if err
+            @_parseManifest(content,callback)
     
     _parseManifest: (data, callback)->
         try

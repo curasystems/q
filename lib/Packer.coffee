@@ -36,24 +36,21 @@ module.exports = class Packer extends events.EventEmitter
 
     create: (folderPath, callback)->
 
-        @manifestPath = path.normalize path.join(folderPath, @options.manifestName)
+        @path = path.normalize(folderPath)
         
-        fs.exists @manifestPath, (exists)=>
-            return callback() if not exists
-
-            @path = path.dirname(@manifestPath)
-
-            async.waterfall [
-                    (cb)=>
-                         readManifest(folderPath, @options.manifestName, cb)
-                    ,(manifest, cb)=>
-                        @_processManifest manifest, (err)->cb(err,manifest)
-                    ,(manifest, cb)=>
-                        @_createListing(manifest, cb)
-                ],
-                (err)=>
-                    @emit 'end'
-                    callback(err)
+        async.waterfall [
+                (cb)=>
+                    readManifest(folderPath, @options.manifestName, cb)
+                ,(manifestPath, manifest, cb)=>
+                    @manifestPath = manifestPath
+                    @_processManifest manifest, (err)->
+                        cb(err,manifest)
+                ,(manifest, cb)=>
+                    @_createListing(manifest, cb)
+            ],
+            (err)=>
+                @emit 'end'
+                callback(err)
   
     _processManifest: (manifest, callback)->
         

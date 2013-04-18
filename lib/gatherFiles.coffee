@@ -1,3 +1,4 @@
+path = require('path')
 glob = require('glob')
 async = require('async')
 sha1 = require('./sha1')
@@ -5,7 +6,8 @@ sha1 = require('./sha1')
 module.exports = (directory, globFilter, callback)->
 
     collectAllFilesUsingGlob directory, globFilter, (err,files)->
-        processAllFiles directory, files, callback
+        processAllFiles directory, files, (err,files)->
+            callback(err,files)
 
 collectAllFilesUsingGlob = (directory,globFilter,callback)->
 
@@ -34,7 +36,8 @@ processFile = (directory, filePath, callback)->
     fs.stat fullPath, (err,stats)=>
 
         return callback(err) if err
-        return callback(null) if stats.isDirectory()
+        if stats.isDirectory()
+            return callback(null) 
 
         entry = 
             name: filePath

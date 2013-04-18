@@ -14,10 +14,18 @@ describe 'packing folders into packages', ->
     it 'requires a path to a folder and a callback', ->
         expect( ()->q.pack() ).to.throw()
 
-    it 'requires a folder path with a parsable q.manifest', (done)->
+    it 'requires a folder path with a parsable q.manifest or package.json', (done)->
         q.pack "#{__dirname}/test-folder-b-invalid", (err)->
             expect(err).to.be.instanceof(q.InvalidManifestError)
             done()
+
+    describe 'packing folders with a package.json', ->
+
+        it 'works and takes name,version,description from the package.json', (done)->
+            q.pack "#{__dirname}/test-folder-node", (err, p)->
+                expect(err).to.be.null
+                p.name.should.equal('test-folder-node')
+                done()
 
     describe 'packing test-folder-a', ->
         
@@ -71,7 +79,8 @@ describe 'packing folders into packages', ->
                 it 'knows the version of the package', -> p.version.should.equal '0.1.0'
                 it 'knows the description of the package', -> p.description.should.equal 'My Description'
                 it 'has a path where the directory root is', -> p.path.should.equal path.normalize("#{__dirname}/test-folder-a")
-                it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize path.join(TEST_FOLDER, 'q.manifest')
+                it 'has a manifestPath where the manifest was found', ->
+                    p.manifestPath.should.equal path.normalize path.join(TEST_FOLDER, 'q.manifest')
                 it 'has a cachePath where the package is cached', -> p.cachePath.should.not.be.empty
 
                 it 'has a package uid which identifies the package and its contents', -> p.uid.should.equal('b74ed98ef279f61233bad0d4b34c1488f8525f27')

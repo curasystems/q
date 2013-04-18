@@ -1,0 +1,12 @@
+{
+  "name": "test-folder-node",
+  "version": "0.1.0",
+  "description": "a simple node project to package",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": "",
+  "author": "",
+  "license": "BSD"
+}
