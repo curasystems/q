@@ -76,14 +76,22 @@ describe 'packing folders into packages', ->
                 it 'has a path where the directory root is', -> p.path.should.equal path.normalize("#{__dirname}/test-folder-a")
                 it 'has a manifestPath where the manifest was found', -> p.manifestPath.should.equal path.normalize path.join(TEST_FOLDER, 'q.manifest')
                 it 'has a cachePath where the package is cached', -> p.cachePath.should.not.be.empty
+
                 it 'has a package uid which identifies the package and its contents', -> p.uid.should.equal('b74ed98ef279f61233bad0d4b34c1488f8525f27')
+
+                describe 'and listing', ->
+
+                    it 'which also has the name', -> p.listing.name.should.equal p.name
+                    it 'which also has the version', -> p.listing.version.should.equal p.version
+
+                
 
                 describe 'files in package', ->
         
                     it 'stored in files property', ()->
                         p.files.should.not.be.empty
 
-                    it 'contains files from subfolders too ', ()->
+                    it 'contains files from subfolders too', ()->
                         atLeastOneFileInSubdirectory = no
                         
                         p.files.forEach (file)->
@@ -119,16 +127,31 @@ describe 'packing folders into packages', ->
                     stats = fs.statSync buildCachePath()
                     stats.isFile().should.be.true
 
-                it 'the package content file is a zip file', (done)->
+                describe 'the content saved in it', ->
 
-                    onEntryHandler = sinon.spy()
+                    file = null
 
-                    file = fs.createReadStream(buildCachePath()).pipe(unzip.Parse())
+                    beforeEach ()->
+                        file = fs.createReadStream(buildCachePath()).pipe(unzip.Parse())
 
-                    file.on 'entry', onEntryHandler
-                    file.on 'close', ()->
-                        onEntryHandler.should.have.been.called.once
-                        done()                    
+                    it 'the package content file is a zip file', (done)->
+
+                        onEntryHandler = sinon.spy()
+
+                        file.on 'entry', onEntryHandler
+                        file.on 'close', ()->
+                            onEntryHandler.should.have.been.called.once
+                            done()      
+
+                    it 'contains a .q.listing file', (done)->
+                        foundListing = no
+
+                        file.on 'entry', (entry)->
+                            foundListing = true if entry.path is '.q.listing'
+
+                        file.on 'close', ()->
+                            foundListing.should.be.true
+                            done()                    
 
                 buildCachePath = ()->
                     firstDir = 'objects'

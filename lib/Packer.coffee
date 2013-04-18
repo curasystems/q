@@ -11,9 +11,9 @@ archiver = require('archiver')
 
 errors = require('./errors')
 
-sha1 = require('./sha1')
 gatherFiles = require('./gatherFiles')
 readManifest = require('./readManifest')
+calculateListingUid = require('./calculateListingUid')
 
 module.exports = class Packer extends events.EventEmitter
 
@@ -31,7 +31,8 @@ module.exports = class Packer extends events.EventEmitter
         @path = null
         @manifestPath = null
         @cachePath = null
-        
+        @listing = null
+
     create: (folderPath, callback)->
 
         @manifestPath = path.normalize path.join(folderPath, @options.manifestName)
@@ -79,14 +80,13 @@ module.exports = class Packer extends events.EventEmitter
 
     _calculateUid: (cb)->
         
-        listing = 
+        @listing = 
             name: @name
             version: @version
             files: ({name:f.name,sha1:f.sha1} for f in @files)
 
-        sha1OfListing = sha1.calculate new Buffer(JSON.stringify(listing))
-        @uid = sha1OfListing
-        
+        @uid = calculateListingUid(@listing)
+
         cb(null, @uid)        
 
     saveToCache: (callback)->
@@ -101,6 +101,8 @@ module.exports = class Packer extends events.EventEmitter
             output = fs.createWriteStream @cachePath
             archive.pipe(output)
             
+            archive.append JSON.stringify(@listing,null, " "), {name:'.q.listing'}
+
             @files.forEach (file)->
                 lazyFileStream = new lazystream.Readable ()->
                     return fs.createReadStream(file.path)
