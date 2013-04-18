@@ -68,6 +68,18 @@ describe 'unpacking packages', ->
                     expect(err).to.be.null
                     listing.name.should.equal('my-package')
                     done()
-            #       
-            #it.only 'the unpacked contents can be verified against the package', (done)->
-            #    q.verify PACKAGE_PATH, TARGET_FOLDER, done
+            
+            it 'the unpacked contents can be verified against the package', (done)->
+                q.verifyPackage PACKAGE_PATH, (err,result)->
+                    result.valid.should.be.true
+                    done()
+
+            it 'invalid packets list the errors', (done)->
+                q.verifyPackage "#{__dirname}/packages/manipulatedPackage.zip", (err,result)->
+                    result.valid.should.be.false
+                    
+                    invalidFile = f for f in result.files when f.valid is false
+                    invalidFile.name.should.equal 'content/deep.txt'
+                    invalidFile.valid.should.be.false
+                    
+                    done()

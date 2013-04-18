@@ -3,9 +3,13 @@ fs = require('fs')
 async = require('async')
 Buffers = require('buffers')
 unzip = require('unzip')
+_ = require('underscore')
 
 Packer = require('./Packer')
 Unpacker = require('./Unpacker')
+
+sha1 = require('./sha1')
+calculateListingUid = require('./calculateListingUid')
 
 # Exports all errors
 module.exports = errors = require('./errors')
@@ -38,9 +42,10 @@ module.exports.unpack = (packagePath, targetDir, callback)->
     e.unpack(targetDir, callback)
 
 
-module.exports.listPackage = (packagePath, callback) ->
+listPackage = module.exports.listPackage = (packagePath, callback) ->
     
-    foundListing = no
+    zipClosed = no
+    listing = null
 
     zip = fs.createReadStream(packagePath)
       .pipe(unzip.Parse())
@@ -48,35 +53,66 @@ module.exports.listPackage = (packagePath, callback) ->
         
         if isListingEntry entry
             foundListing = yes
-            readObjectFromStream entry, (err, listing)->
-                callback(err, listing)
+            readObjectFromStream entry, (err, listingFound)->
+
+                listing = listingFound
+                listing.uid = calculateListingUid(listing)
+                
+                if zipClosed
+                    callback(null, listing)
         else
             entry.autodrain()
 
     zip.on 'close', ()->
-        if not foundListing
+        zipClosed = yes
+        if not listing
             callback(new errors.NoListingError("No .q.listing file in #{packagePath}")) 
+        else 
+            callback(null, listing)
 
-module.exports.verify = (packagePath, targetDir, callback) ->
+module.exports.verifyPackage = (packagePath, callback) ->
 
-    listing = null
-    filesToCheck = []
-    failedFiles = []
+    verifyQueue = async.queue(verifySha1, 100)
 
-    zip = fs.createReadStream(packagePath)
-      .pipe(unzip.Parse())
-      .on 'entry', (entry) ->
-        
-        if entry.path is '.q.listing'
-            readObjectFromStream entry, (err, storedListing)->
-                return callback(err) if err
-                listing = storedListing
+    listPackage packagePath, (err,listing)->
+        return callback(err) if err
 
-        if not listing 
-            filesToCheck.push(entry)       
+        result = listing
+        result.valid = true
+        result.extraFiles = []
+    
+        zip = fs.createReadStream(packagePath)
+          .pipe(unzip.Parse())
+          .on 'entry', (entry) ->
+            
+            if entry.path is '.q.listing'
+                entry.autodrain()
+            else
+                listEntry = _.find listing.files, (f)->f.name is entry.path
 
-    zip.on 'close', ()->
-        callback()
+                if not listEntry
+                    result.extraFiles.push( entry.path )
+                    entry.autodrain()
+                else
+                    verifyQueue.push result:result, listEntry:listEntry, stream:entry
+
+        zip.on 'close', ()->
+            if verifyQueue.length() == 0
+                callback(null,result)
+            else
+                verifyQueue.drain = ()->
+                    callback(null,result)
+
+verifySha1 = (job, callback)->
+
+    sha1.calculate job.stream, (err,hash)->
+        if job.listEntry.sha1 isnt hash
+            job.result.valid = false
+            job.listEntry.valid = false
+        else
+            job.listEntry.valid = true
+
+        callback(null)
 
 isListingEntry = (entry)->entry.path is '.q.listing'
 
