@@ -1,4 +1,3 @@
-assert = require('assert')
 mkdirp = require('mkdirp')
 util = require('util')
 events = require('events')
@@ -173,8 +172,6 @@ module.exports = class Packer extends events.EventEmitter
 
         firstDir = 'objects'
         secondDir = @uid.substr 0,2
-        filename = @uid.substr(2) + '.pkg'
-
-        assert @uid + '.pkg' == secondDir + filename
+        filename = @uid + '.pkg'
 
         return path.join firstDir, secondDir, filename

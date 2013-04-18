@@ -133,9 +133,7 @@ describe 'packing folders into packages', ->
                 buildCachePath = ()->
                     firstDir = 'objects'
                     secondDir = p.uid.substr 0,2
-                    filename = p.uid.substr(2) + '.pkg'
-
-                    (p.uid + '.pkg').should.equal( secondDir + filename )
+                    filename = p.uid + '.pkg'
 
                     packageFilePath = path.join Q_CACHE_FOLDER, firstDir, secondDir, filename
                     

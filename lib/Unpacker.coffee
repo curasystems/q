@@ -24,5 +24,3 @@ module.exports = class Unpacker
                 targetDirWriter.on 'close', ()->
                     callback()
             
-
-
