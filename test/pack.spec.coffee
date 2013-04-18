@@ -21,7 +21,7 @@ describe 'packing folders into packages', ->
 
     describe 'packing folders with a package.json', ->
 
-        it 'works and takes name,version,description from the package.json', (done)->
+        it.only 'works and takes name,version,description from the package.json', (done)->
             q.pack "#{__dirname}/test-folder-node", (err, p)->
                 expect(err).to.be.null
                 p.name.should.equal('test-folder-node')
