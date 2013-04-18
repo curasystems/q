@@ -4,15 +4,16 @@ events = require('events')
 lazystream = require('lazystream')
 
 async = require('async')
-yaml = require('js-yaml')
-glob = require('glob')
 semver = require('semver')
 
 _ = require('underscore')
 archiver = require('archiver')
-sha1 = require('./sha1')
 
 errors = require('./errors')
+
+sha1 = require('./sha1')
+gatherFiles = require('./gatherFiles')
+readManifest = require('./readManifest')
 
 module.exports = class Packer extends events.EventEmitter
 
@@ -41,10 +42,8 @@ module.exports = class Packer extends events.EventEmitter
             @path = path.dirname(@manifestPath)
 
             async.waterfall [
-                     (cb)=>
-                         @_readManifest(@manifestPath,cb)
-                    ,(data, cb)=>
-                        @_parseManifest(data,cb)
+                    (cb)=>
+                         readManifest(folderPath, @options.manifestName, cb)
                     ,(manifest, cb)=>
                         @_processManifest manifest, (err)->cb(err,manifest)
                     ,(manifest, cb)=>
@@ -55,22 +54,7 @@ module.exports = class Packer extends events.EventEmitter
                 (err)=>
                     @emit 'end'
                     callback(err)
-
-
-    _readManifest: (manifestPath, callback)->
-        fs.readFile manifestPath, encoding:'utf8', callback
-    
-    _parseManifest: (data, callback)->
-        try
-            manifest = yaml.load(data)
-
-            if manifest==null
-                callback(new errors.InvalidManifestError("Could not parse manifest"))
-            else
-                callback(null, manifest)            
-        catch e
-            callback(new errors.InvalidManifestError(e))
-
+  
     _processManifest: (manifest, callback)->
         
         @name = manifest.name
@@ -88,37 +72,10 @@ module.exports = class Packer extends events.EventEmitter
 
     _addFiles: (manifest,callback)->
 
-        glober = new glob.Glob '**/*', cwd:@path, dot:no, debug:no
-
-        glober.on 'error', callback
-        glober.on 'end', (files)=>
-
-            @i = 0
-            async.eachSeries files, (file,cb)=>
-                    @_addFile(file,cb)
-                , callback
-        
-    _addFile: (filePath, callback)->
-
-        fullPath = path.join(@path,filePath)
-        
-        fs.stat fullPath, (err,stats)=>
-
+        gatherFiles @path, '**/*', (err,files)=>
             return callback(err) if err
-            return callback(null) if stats.isDirectory()
-
-            file = 
-                name: filePath
-                path: fullPath
-                sha1: null
-
-            sha1.calculate fs.createReadStream(file.path, encoding:'utf8'), (err,sha1)=>
-
-                file.sha1 = sha1
-                @files.push(file)
-                @emit 'file', file
-
-                callback()
+            @files = files
+            callback(null)
 
     _calculateUid: (cb)->
         

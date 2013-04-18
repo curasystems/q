@@ -58,3 +58,5 @@ describe 'unpacking packages', ->
 
                 zip.on 'close', ()->done()
                
+            it.skip 'the unpacked contents can be verified against the package', (done)->
+                q.verify PACKAGE_PATH, TARGET_FOLDER, done

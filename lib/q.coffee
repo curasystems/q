@@ -35,3 +35,6 @@ module.exports.unpack = (packagePath, targetDir, callback)->
     e.unpack(targetDir, callback)
 
 
+module.exports.verify = (packagePath, targetDir, callback) ->
+
+        
