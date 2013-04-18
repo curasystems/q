@@ -48,9 +48,6 @@ describe 'packing folders into packages', ->
             it 'when its finished it emits an "end" event', (done)->                    
                 shouldEmitEvent 'end', done 
 
-            it.skip 'emits an "file" event for each file added', (done)->
-                shouldEmitEvent 'file', done 
-
             shouldEmitEvent = (name, done)->
                 eventHandler = sinon.spy()
                 
@@ -88,13 +85,13 @@ describe 'packing folders into packages', ->
 
                 describe 'files in package', ->
         
-                    it 'stored in files property', ()->
-                        p.files.should.not.be.empty
+                    it 'stored in listing.files property', ()->
+                        p.listing.files.should.not.be.empty
 
                     it 'contains files from subfolders too', ()->
                         atLeastOneFileInSubdirectory = no
                         
-                        p.files.forEach (file)->
+                        p.listing.files.forEach (file)->
                             if file.name.indexOf('/')>0 
                                 atLeastOneFileInSubdirectory = yes
                         
@@ -151,6 +148,16 @@ describe 'packing folders into packages', ->
 
                         file.on 'close', ()->
                             foundListing.should.be.true
+                            done()                    
+
+                    it 'contains all three files + listing', (done)->
+                        fileCount = 0
+
+                        file.on 'entry', (entry)->
+                            fileCount++
+
+                        file.on 'close', ()->
+                            fileCount.should.equal(4)
                             done()                    
 
                 buildCachePath = ()->

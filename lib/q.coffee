@@ -10,6 +10,7 @@ Unpacker = require('./Unpacker')
 
 sha1 = require('./sha1')
 calculateListingUid = require('./calculateListingUid')
+listing = require('./listing')
 
 # Exports all errors
 module.exports = errors = require('./errors')
@@ -41,11 +42,10 @@ module.exports.unpack = (packagePath, targetDir, callback)->
     e = new Unpacker(packagePath)
     e.unpack(targetDir, callback)
 
-
 listPackage = module.exports.listPackage = (packagePath, callback) ->
     
     zipClosed = no
-    listing = null
+    packageListing = null
 
     zip = fs.createReadStream(packagePath)
       .pipe(unzip.Parse())
@@ -55,20 +55,61 @@ listPackage = module.exports.listPackage = (packagePath, callback) ->
             foundListing = yes
             readObjectFromStream entry, (err, listingFound)->
 
-                listing = listingFound
-                listing.uid = calculateListingUid(listing)
+                packageListing = listingFound
+                packageListing.uid = calculateListingUid(packageListing)
                 
                 if zipClosed
-                    callback(null, listing)
+                    callback(null, packageListing)
         else
             entry.autodrain()
 
     zip.on 'close', ()->
         zipClosed = yes
-        if not listing
+        if not packageListing
             callback(new errors.NoListingError("No .q.listing file in #{packagePath}")) 
         else 
-            callback(null, listing)
+            callback(null, packageListing)
+
+module.exports.verifyDirectory = (packageDirectoryPath, callback) ->
+
+    if not packageDirectoryPath
+        throw new errors.ArgumentError("packageDirectoryPath is required")
+
+    listingPath = path.join(packageDirectoryPath, '.q.listing')
+
+    fs.exists listingPath, (exists)->
+        if not exists
+            return callback(new errors.NoListingError(".q.listing expected at #{listingPath}"))
+
+        fs.readFile listingPath, encoding:'utf8', (err,content)->
+            return callback(err) if err
+
+            storedListing = JSON.parse(content)
+
+            listing.createFromDirectory packageDirectoryPath, storedListing, (err,calculatedListing)->
+                
+                result = verifyListing(calculatedListing, storedListing)
+                callback(null, result)
+
+verifyListing = (actualListing, expectedListing)->
+
+    result = 
+        valid: actualListing.uid is expectedListing.uid
+        filesManipulated: no
+        uid: actualListing.uid
+        files: actualListing.files
+
+    result.files.forEach (actualFile)->
+        expectedFile = _.find expectedListing.files, (f)->f.name is actualFile.name
+        
+        if not expectedFile 
+            actualFile.extra = yes
+        else
+            actualFile.valid = actualFile.sha1 is expectedFile.sha1
+            result.valid = false unless actualFile.valid
+            result.filesManipulated = true unless actualFile.valid
+
+    return result
 
 module.exports.verifyPackage = (packagePath, callback) ->
 

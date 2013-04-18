@@ -11,6 +11,7 @@ archiver = require('archiver')
 
 errors = require('./errors')
 
+listing = require('./listing')
 gatherFiles = require('./gatherFiles')
 readManifest = require('./readManifest')
 calculateListingUid = require('./calculateListingUid')
@@ -48,9 +49,7 @@ module.exports = class Packer extends events.EventEmitter
                     ,(manifest, cb)=>
                         @_processManifest manifest, (err)->cb(err,manifest)
                     ,(manifest, cb)=>
-                        @_addFiles(manifest, cb)   
-                    ,(cb)=>
-                        @_calculateUid(cb)
+                        @_createListing(manifest, cb)
                 ],
                 (err)=>
                     @emit 'end'
@@ -71,29 +70,19 @@ module.exports = class Packer extends events.EventEmitter
 
         callback(null)
 
-    _addFiles: (manifest,callback)->
-
-        gatherFiles @path, '**/*', (err,files)=>
+    _createListing: (manifest,callback)->
+        listing.createFromDirectory @path, manifest, (err,directoryListing)=>
             return callback(err) if err
-            @files = files
+            #console.log directoryListing
+            @listing = directoryListing
+            @uid = directoryListing.uid
             callback(null)
-
-    _calculateUid: (cb)->
-        
-        @listing = 
-            name: @name
-            version: @version
-            files: ({name:f.name,sha1:f.sha1} for f in @files)
-
-        @uid = calculateListingUid(@listing)
-
-        cb(null, @uid)        
 
     saveToCache: (callback)->
 
         @cachePath = @_buildCachePath()
         mkdirp path.dirname(@cachePath), (err)=>
-            return callback(err) if err #?.errno is not 47
+            return callback(err) if err
 
             archive = archiver('zip');
             archive.on 'error', (err)->callback(err)
@@ -103,9 +92,12 @@ module.exports = class Packer extends events.EventEmitter
             
             archive.append JSON.stringify(@listing,null, " "), {name:'.q.listing'}
 
-            @files.forEach (file)->
+            @listing.files.forEach (file)=>
+
+                filePath = path.join @path, file.name
+
                 lazyFileStream = new lazystream.Readable ()->
-                    return fs.createReadStream(file.path)
+                    return fs.createReadStream(filePath)
                 archive.append(lazyFileStream, {name:file.name})
 
             hadError = no
