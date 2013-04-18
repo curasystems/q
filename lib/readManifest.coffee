@@ -31,8 +31,9 @@ class ManifestReader
                     callback(err, @manifestPath, @manifest)
 
     _attemptToLoadPackageJson: (callback)->
-        
+
         fs.readFile @packageJsonPath, encoding:'utf8', (err,content)=>
+
             return callback(err) if err
 
             packageInfo = JSON.parse(content)

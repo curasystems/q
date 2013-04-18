@@ -32,6 +32,12 @@ describe 'packing folders into packages', ->
                 p.manifestPath.should.contain('q.manifest')
                 done()
 
+        it 'the manifestPath is package.json when no q.manifest present', (done)->
+            q.pack "#{__dirname}/test-folder-node-pure", (err, p)->
+                p.manifestPath.should.contain('package.json')
+                done()
+
+
     describe 'packing test-folder-a', ->
         
         TEST_FOLDER = "#{__dirname}/test-folder-a"
