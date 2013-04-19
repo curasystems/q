@@ -58,9 +58,10 @@ describe 'packing folders into packages', ->
                     pkg.should.equal(p)
                     done()                            
 
-            it 'is an event emitter', ()->
+            it 'is an event emitter', (done)->
                 p = q.pack TEST_FOLDER, ()->
                     expect(p).to.respondTo('on')                   
+                    done()
 
         describe 'package events', ->
             

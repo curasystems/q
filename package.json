@@ -34,7 +34,8 @@
     "lazystream": "~0.1.0",
     "unzip": "~0.1.7",
     "fstream": "~0.1.22",
-    "buffers": "~0.1.1"
+    "buffers": "~0.1.1",
+    "q-fs-store": "~0.1"
   },
   "devDependencies": {
     "sinon": "~1.6.0",
