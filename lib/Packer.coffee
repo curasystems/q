@@ -19,6 +19,7 @@ calculateListingUid = require('./calculateListingUid')
 module.exports = class Packer extends events.EventEmitter
 
     DEFAULT_OPTIONS = 
+        store: null
         manifestName: 'q.manifest'
 
     constructor: (options={})->
@@ -31,7 +32,6 @@ module.exports = class Packer extends events.EventEmitter
         @files = []
         @path = null
         @manifestPath = null
-        @cachePath = null
         @listing = null
 
     create: (folderPath, callback)->
@@ -76,50 +76,30 @@ module.exports = class Packer extends events.EventEmitter
             callback(null)
 
     saveToCache: (callback)->
+        
+        packageInfo =
+            uid: @uid
+            name: @name
+            version: @version
+            description: @description
 
-        @cachePath = @_buildCachePath()
-        mkdirp path.dirname(@cachePath), (err)=>
-            return callback(err) if err
+        @options.store.writePackage packageInfo, (error,packageWriteStream)=>
+    
+            @_createPackageStream (err,packageStream)->
+                packageStream.pipe(packageWriteStream)                
+                packageWriteStream.on 'close', callback
 
-            archive = archiver('zip');
-            archive.on 'error', (err)->callback(err)
+    _createPackageStream: (callback)->
+        archive = archiver('zip');
+        archive.append JSON.stringify(@listing,null, " "), {name:'.q.listing'}
 
-            output = fs.createWriteStream @cachePath
-            archive.pipe(output)
-            
-            archive.append JSON.stringify(@listing,null, " "), {name:'.q.listing'}
+        @listing.files.forEach (file)=>
 
-            @listing.files.forEach (file)=>
+            filePath = path.join @path, file.name
 
-                filePath = path.join @path, file.name
+            lazyFileStream = new lazystream.Readable ()->
+                return fs.createReadStream(filePath)
+            archive.append(lazyFileStream, {name:file.name})
 
-                lazyFileStream = new lazystream.Readable ()->
-                    return fs.createReadStream(filePath)
-                archive.append(lazyFileStream, {name:file.name})
-
-            hadError = no
-
-            archive.finalize (err,written)=>
-                if err 
-                    hadError = yes
-                    return callback(err) 
-                
-            output.on 'close', =>
-                if hadError
-                    fs.unlinkSync @cachePath
-                    return
-
-                callback(null)
-
-
-    _buildCachePath: ()->       
-        cacheDirectoryPath = path.join @path, '.q'
-        return path.join cacheDirectoryPath, @_buildPackageFilePathInCache()
-                    
-    _buildPackageFilePathInCache: ()->
-
-        firstDir = 'objects'
-        secondDir = @uid.substr 0,2
-        filename = @uid + '.pkg'
-
-        return path.join firstDir, secondDir, filename
+        archive.finalize()
+        callback(null,archive)        

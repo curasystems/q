@@ -11,6 +11,9 @@ unzip = require 'unzip'
 describe 'unpacking', ->
   
     q = null
+    store = null
+
+    Q_CACHE_FOLDER = "#{__dirname}/.cache"
     TARGET_FOLDER = "#{__dirname}/test-folder-a-unpacked/"
     
     MANIPULATED_PACKAGE = "#{__dirname}/packages/manipulatedPackage.zip"
@@ -19,7 +22,8 @@ describe 'unpacking', ->
 
     beforeEach ->
         wrench.rmdirSyncRecursive TARGET_FOLDER if fs.existsSync TARGET_FOLDER
-        q = new Q(store:qStore)   
+        store = new qStore(path:Q_CACHE_FOLDER)
+        q = new Q(store:store)   
 
     it 'needs a path to package', ->
         expect( ()->q.unpack() ).to.throw(q.errors.ArgumentError, /package/)
@@ -28,24 +32,22 @@ describe 'unpacking', ->
         expect( ()->q.unpack('package-path') ).to.throw(q.errors.ArgumentError, /target/)
 
     it 'extract requires the target path argument to not exist', ->
-        q.unpack 'test',"#{__dirname}", (err)->
+        q.unpack EXTRA_FILES_PACKAGE, "#{__dirname}", (err)->
             err.should.not.be.null
             
     describe 'a valid package', ->
     
         p = null
         TEST_FOLDER = "#{__dirname}/test-folder-a"
-        PACKAGE_PATH = null
 
         beforeEach (done)->
             p = q.pack TEST_FOLDER, ()->
-                PACKAGE_PATH = p.cachePath
                 done()
 
         describe 'after unpacking it', ->
 
             beforeEach (done)->
-                q.unpack PACKAGE_PATH, TARGET_FOLDER, ()->
+                q.unpack p.uid, TARGET_FOLDER, ()->
                     done()               
 
             it 'should create the target folder', ->
@@ -54,16 +56,15 @@ describe 'unpacking', ->
 
             it 'should contain all the files in the package', (done)->
 
-                zip = fs.createReadStream(PACKAGE_PATH)
-                  .pipe(unzip.Parse())
-                  .on 'entry', (entry) ->
-                    
-                    unpackedPath = path.join(TARGET_FOLDER, entry.path)
-                    fs.existsSync(unpackedPath).should.be.true
+                store.readPackage p.uid, (err,packageStream)->
 
-                    entry.autodrain()
+                    zip = packageStream.pipe(unzip.Parse())
+                    zip.on 'entry', (entry) ->
+                        unpackedPath = path.join(TARGET_FOLDER, entry.path)
+                        fs.existsSync(unpackedPath).should.be.true
+                        entry.autodrain()
 
-                zip.on 'close', ()->done()
+                    zip.on 'close', ()->done()
 
             it 'can be verified against a sha1 value', (done)->
 
@@ -76,13 +77,13 @@ describe 'unpacking', ->
         describe 'while still packed', ->
         
             it 'can be listed', (done)->
-                q.listPackage PACKAGE_PATH, (err,listing)->
+                q.listPackageContent p.uid, (err,listing)->
                     expect(err).to.be.null
                     listing.name.should.equal('my-package')
                     done()
             
-            it 'can be verified against the package', (done)->
-                q.verifyPackage PACKAGE_PATH, (err,result)->
+            it 'can be verified', (done)->
+                q.verifyPackage p.uid, (err,result)->
                     result.valid.should.be.true
                     done()
                 
@@ -140,7 +141,7 @@ describe 'unpacking', ->
     describe 'packages can be inspected when still packed', ->
 
         it 'a package can be listed but fails when no .q.listing in it', (done)->
-            q.listPackage MISSING_LISTING_PACKAGE, (err,listing)->
+            q.listPackageContent MISSING_LISTING_PACKAGE, (err,listing)->
                 err.should.be.instanceof( q.errors.NoListingError )
                 done()
 

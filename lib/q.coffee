@@ -5,6 +5,8 @@ Buffers = require('buffers')
 unzip = require('unzip')
 _ = require('underscore')
 
+qStore = require 'q-fs-store'
+
 Packer = require('./Packer')
 Unpacker = require('./Unpacker')
 
@@ -14,7 +16,12 @@ listing = require('./listing')
 
 # Exports all errors
 module.exports = class Q
-    constructor: ()->
+
+    DEFAULT_OPTIONS = 
+        store:new qStore(path:process.cwd())
+    
+    constructor: (options={})->
+        @options = _.defaults options, DEFAULT_OPTIONS
         @errors = require('./errors')
 
     pack: (manifestPath, callback)->
@@ -22,7 +29,7 @@ module.exports = class Q
         if not manifestPath
             throw new @errors.ArgumentError("missing path to manifest")
 
-        p = new Packer
+        p = new Packer(@options)
 
         async.series [ 
             (cb)->p.create(manifestPath,cb)
@@ -32,25 +39,43 @@ module.exports = class Q
         
         return p   
 
-    unpack: (packagePath, targetDir, callback)->
+    unpack: (packageIdentifier, targetDir, callback)->
 
-        if not packagePath
-            throw new @errors.ArgumentError("packagePath is required")
+        if not packageIdentifier
+            throw new @errors.ArgumentError("packageIdentifier is required")
 
         if not targetDir
             throw new @errors.ArgumentError("targetDir is required")
 
-        e = new Unpacker(packagePath)
-        e.unpack(targetDir, callback)
+        @_readPackage packageIdentifier, (err,packageStream)->
+            return callback(err) if err
 
-    listPackage: (packagePath, callback) ->
+            u = new Unpacker()
+            u.unpack(packageStream, targetDir, callback)
+
+    listPackageContent: (packageIdentifier, callback) ->        
+        @_readPackage packageIdentifier, (err, packageStream)=>
+            return callback(err) if err
+            @_listPackageStreamContent(packageStream, callback)
+
+    _readPackage: (packageIdentifier, callback)->
+        if not packageIdentifier
+            throw new @errors.ArgumentError("packageIdentifier is required")
+
+        fs.exists packageIdentifier, (exists)=>
+            if exists
+                packageStream = fs.createReadStream(packageIdentifier)
+                callback(null, packageStream)
+            else
+                @options.store.readPackage packageIdentifier, callback
+
+    _listPackageStreamContent: (packageStream, callback)->
         
         zipClosed = no
         packageListing = null
 
-        zip = fs.createReadStream(packagePath)
-          .pipe(unzip.Parse())
-          .on 'entry', (entry) =>
+        zip = packageStream.pipe(unzip.Parse())
+        zip.on 'entry', (entry) =>
             
             if @_isListingEntry entry
                 foundListing = yes
@@ -67,7 +92,7 @@ module.exports = class Q
         zip.on 'close', ()=>
             zipClosed = yes
             if not packageListing
-                callback(new @errors.NoListingError("No .q.listing file in #{packagePath}")) 
+                callback(new @errors.NoListingError("No .q.listing file in package")) 
             else 
                 callback(null, packageListing)
 
@@ -112,38 +137,40 @@ module.exports = class Q
 
         return result
 
-    verifyPackage: (packagePath, callback) ->
+    verifyPackage: (packageIdentifier, callback) ->
+
+        #callback()
 
         verifyQueue = async.queue(@_verifySha1, 100)
 
-        @listPackage packagePath, (err,listing)->
+        @listPackageContent packageIdentifier, (err,listing)=>
             return callback(err) if err
 
             result = listing
             result.valid = true
             result.extraFiles = []
         
-            zip = fs.createReadStream(packagePath)
-              .pipe(unzip.Parse())
-              .on 'entry', (entry) ->
-                
-                if entry.path is '.q.listing'
-                    entry.autodrain()
-                else
-                    listEntry = _.find listing.files, (f)->f.name is entry.path
-
-                    if not listEntry
-                        result.extraFiles.push( entry.path )
+            @_readPackage packageIdentifier, (err, packageStream)=>
+                zip = packageStream.pipe(unzip.Parse())
+                zip.on 'entry', (entry) ->
+                    
+                    if entry.path is '.q.listing'
                         entry.autodrain()
                     else
-                        verifyQueue.push result:result, listEntry:listEntry, stream:entry
+                        listEntry = _.find listing.files, (f)->f.name is entry.path
 
-            zip.on 'close', ()->
-                if verifyQueue.length() == 0
-                    callback(null,result)
-                else
-                    verifyQueue.drain = ()->
+                        if not listEntry
+                            result.extraFiles.push( entry.path )
+                            entry.autodrain()
+                        else
+                            verifyQueue.push result:result, listEntry:listEntry, stream:entry
+
+                zip.on 'close', ()->
+                    if verifyQueue.length() == 0
                         callback(null,result)
+                    else
+                        verifyQueue.drain = ()->
+                            callback(null,result)
 
     _verifySha1: (job, callback)->
 
