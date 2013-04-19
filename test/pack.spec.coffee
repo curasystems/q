@@ -1,4 +1,5 @@
-q = require '..'
+Q = require '..'
+qStore = require 'q-fs-store'
 
 fs = require 'fs'
 path = require 'path'
@@ -11,12 +12,17 @@ sha1 = require '../lib/sha1'
 
 describe 'packing folders into packages', ->
 
+    q = null
+
+    beforeEach ->
+        q = new Q(store:qStore)        
+
     it 'requires a path to a folder and a callback', ->
         expect( ()->q.pack() ).to.throw()
 
     it 'requires a folder path with a parsable q.manifest or package.json', (done)->
         q.pack "#{__dirname}/test-folder-b-invalid", (err)->
-            expect(err).to.be.instanceof(q.InvalidManifestError)
+            expect(err).to.be.instanceof(q.errors.InvalidManifestError)
             done()
 
     describe 'packing folders with a package.json', ->

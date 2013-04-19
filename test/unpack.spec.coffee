@@ -1,4 +1,5 @@
-q = require '..'
+Q = require '..'
+qStore = require 'q-fs-store'
 
 fs = require 'fs'
 path = require 'path'
@@ -9,6 +10,7 @@ unzip = require 'unzip'
 
 describe 'unpacking', ->
   
+    q = null
     TARGET_FOLDER = "#{__dirname}/test-folder-a-unpacked/"
     
     MANIPULATED_PACKAGE = "#{__dirname}/packages/manipulatedPackage.zip"
@@ -17,12 +19,13 @@ describe 'unpacking', ->
 
     beforeEach ->
         wrench.rmdirSyncRecursive TARGET_FOLDER if fs.existsSync TARGET_FOLDER
+        q = new Q(store:qStore)   
 
     it 'needs a path to package', ->
-        expect( ()->q.unpack() ).to.throw(q.ArgumentError, /package/)
+        expect( ()->q.unpack() ).to.throw(q.errors.ArgumentError, /package/)
 
     it 'needs a path to the target directory', ->
-        expect( ()->q.unpack('package-path') ).to.throw(q.ArgumentError, /target/)
+        expect( ()->q.unpack('package-path') ).to.throw(q.errors.ArgumentError, /target/)
 
     it 'extract requires the target path argument to not exist', ->
         q.unpack 'test',"#{__dirname}", (err)->
@@ -138,7 +141,7 @@ describe 'unpacking', ->
 
         it 'a package can be listed but fails when no .q.listing in it', (done)->
             q.listPackage MISSING_LISTING_PACKAGE, (err,listing)->
-                err.should.be.instanceof( q.NoListingError )
+                err.should.be.instanceof( q.errors.NoListingError )
                 done()
 
         it 'invalid packets lists the manipulated files', (done)->
