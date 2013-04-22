@@ -3,17 +3,28 @@ util = require('util')
 Q_Store = require('q-fs-store')
 program = require('commander')
 
-
+#
+# Prepare q to store in current directories .q folder
+#
 Q_CACHE_FOLDER = "#{process.cwd()}/.q"
 store = new Q_Store(path:Q_CACHE_FOLDER)
 
 Q = require('./q')
 q = new Q(store:store)      
 
+#
+# Commands
+#
 onPackCommand = (options)->
     q.pack options.root, (err,p)=>
         if(err)
             console.log "Error packing", err
+
+
+
+#
+# Parse command line via commander
+#
 
 program.version('0.0.1')
 
