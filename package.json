@@ -7,7 +7,7 @@
     "test": "node test.js --reporter tap",
     "testing": "supervisor -e js,coffee -n exit -- test.js --reporter spec"
   },
-  "bin": "./cli.js",
+  "bin": { "q": "bin/q" },
   "repository": {
     "type": "git",
     "url": "git://github.com/curasystems/q.git"
