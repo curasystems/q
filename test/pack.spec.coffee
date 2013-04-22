@@ -46,7 +46,6 @@ describe 'packing folders into packages', ->
                 p.manifestPath.should.contain('package.json')
                 done()
 
-
     describe 'packing test-folder-a', ->
         
         TEST_FOLDER = "#{__dirname}/test-folder-a"
@@ -109,7 +108,6 @@ describe 'packing folders into packages', ->
 
                     it 'which also has the name', -> p.listing.name.should.equal p.name
                     it 'which also has the version', -> p.listing.version.should.equal p.version
-
                 
 
                 describe 'files in package', ->
@@ -199,3 +197,17 @@ describe 'packing folders into packages', ->
                 fs.writeFileSync tempFile, "dummy"    
                 setTimeout done,50
 
+
+    describe 'packing test-folder-a-new', ->
+        
+        TEST_FOLDER = "#{__dirname}/test-folder-a-new"
+        
+        beforeEach ()->
+            wrench.rmdirSyncRecursive Q_CACHE_FOLDER if fs.existsSync Q_CACHE_FOLDER
+
+        describe 'call to pack', ->
+
+            it 'returns the package directly', (done)->
+                p = q.pack TEST_FOLDER, ->
+                    expect(p).to.not.be.undefined
+                    done()
