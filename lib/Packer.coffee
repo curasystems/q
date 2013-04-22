@@ -1,6 +1,8 @@
 mkdirp = require('mkdirp')
 util = require('util')
 events = require('events')
+path = require('path')
+fs = require('fs')
 lazystream = require('lazystream')
 
 async = require('async')

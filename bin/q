@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+
+// Support coffee script and source maps for stack traces
+require('coffee-script');
+require('source-map-support').install();
+
+require('../lib/cli');

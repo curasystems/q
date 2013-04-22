@@ -1,5 +1,6 @@
 path = require('path')
 glob = require('glob')
+fs = require('fs')
 async = require('async')
 sha1 = require('./sha1')
 

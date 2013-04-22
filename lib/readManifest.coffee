@@ -1,5 +1,7 @@
 yaml = require('js-yaml')
 semver = require('semver')
+path = require('path')
+fs = require('fs')
 _ = require('underscore')
 
 errors = require('./errors')
