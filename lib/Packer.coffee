@@ -1,15 +1,16 @@
-mkdirp = require('mkdirp')
 util = require('util')
 events = require('events')
 path = require('path')
 fs = require('fs')
-lazystream = require('lazystream')
+crypto = require('crypto')
 
+_ = require('underscore')
+mkdirp = require('mkdirp')
+lazystream = require('lazystream')
 async = require('async')
 semver = require('semver')
-crypto = require('crypto')
-_ = require('underscore')
 archiver = require('archiver')
+signer = require('ssh-signer')
 
 errors = require('./errors')
 
@@ -75,24 +76,31 @@ module.exports = class Packer extends events.EventEmitter
     _createListing: (manifest,callback)->
         listing.createFromDirectory @path, manifest, (err,directoryListing)=>
             return callback(err) if err
-            #console.log directoryListing
+            
             @listing = directoryListing
-            @uid = directoryListing.uid
+            @listing.signedBy = @options.signedBy
+            @listing.uid = calculateListingUid(@listing)
+            @uid = @listing.uid
+
             callback(null)
 
     _sign: (cb)->
-        if @options.key
+        if @options.key and @options.signedBy
 
-            sign = crypto.createSign('RSA-SHA1')
-            sign.write(new Buffer(@uid))
-            sign.write(new Buffer(@options.signedBy))
+            signerOptions = 
+                alg: 'RSA-SHA256'
+                hash: 'base64'
 
-            @signature = sign.sign(@options.key, 'base64')
-            @signedBy = @options.signedBy
-            @signed = yes
+            key = @options.key
+            value = @listing.uid + @options.signedBy
 
+            @signature = signer.signPrivateKeyStr( value, key, signerOptions )
             @listing.signature = @signature
-            @listing.signedBy = @signedBy
+
+            @signed = true
+            @signedBy = @options.signedBy
+
+            
 
         cb()
 

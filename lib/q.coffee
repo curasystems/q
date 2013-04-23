@@ -1,6 +1,8 @@
 path = require('path')
 fs = require('fs')
 async = require('async')
+signer = require('ssh-signer')
+
 Buffers = require('buffers')
 unzip = require('unzip')
 _ = require('underscore')
@@ -19,6 +21,7 @@ module.exports = class Q
 
     DEFAULT_OPTIONS = 
         store:new qStore(path:process.cwd())
+        verifyRequiresSignature: yes
     
     constructor: (options={})->
         @options = _.defaults options, DEFAULT_OPTIONS
@@ -82,8 +85,7 @@ module.exports = class Q
                 @_readObjectFromStream entry, (err, listingFound)->
 
                     packageListing = listingFound
-                    packageListing.uid = calculateListingUid(packageListing)
-                    
+
                     if zipClosed
                         callback(null, packageListing)
             else
@@ -114,6 +116,9 @@ module.exports = class Q
 
                 listing.createFromDirectory packageDirectoryPath, storedListing, (err,calculatedListing)=>
                     
+                    calculatedListing.signedBy = storedListing.signedBy
+                    calculatedListing.uid = calculateListingUid(calculatedListing)
+
                     result = @_verifyListing(calculatedListing, storedListing)
                     callback(null, result)
 
@@ -121,9 +126,18 @@ module.exports = class Q
 
         result = 
             verified: actualListing.uid is expectedListing.uid
+            verificationErrors: []
             filesManipulated: no
             uid: actualListing.uid
             files: actualListing.files
+        
+        if @options.verifyRequiresSignature
+            if actualListing.signature
+                result.verified = !!result.signed
+                result.verificationErrors.push( "could not find matching key for signature")
+            else
+                result.verified = no    
+                result.verificationErrors.push( "package has no signature" )
 
         result.files.forEach (actualFile)->
             expectedFile = _.find expectedListing.files, (f)->f.name is actualFile.name
@@ -139,17 +153,34 @@ module.exports = class Q
 
     verifyPackage: (packageIdentifier, callback) ->
 
-        #callback()
-
         verifyQueue = async.queue(@_verifySha1, 100)
 
         @listPackageContent packageIdentifier, (err,listing)=>
             return callback(err) if err
 
-            console.log listing.signedBy
             result = listing
-            result.verified = true
+            result.verified = (listing.uid == calculateListingUid(listing))
+
+            result.verificationErrors = []
             result.extraFiles = []
+            
+            if not result.verified 
+                result.verificationErrors.push( "listing uid does not match files" )
+
+            if @options.keys
+                if not listing.signature
+                    result.signed = null
+                else
+                    result.signed = @_findSigningKey listing, @options.keys
+
+            if @options.verifyRequiresSignature
+                if listing.signature
+                    result.verified = !!result.signed
+                    result.verificationErrors.push( "could not find matching key for signature")
+                else
+                    result.verified = no    
+                    result.verificationErrors.push( "package has no signature" )
+
         
             @_readPackage packageIdentifier, (err, packageStream)=>
                 zip = packageStream.pipe(unzip.Parse())
@@ -172,6 +203,22 @@ module.exports = class Q
                     else
                         verifyQueue.drain = ()->
                             callback(null,result)
+
+    _findSigningKey: (listing, keys)->
+
+        for own name in Object.keys(keys)
+            signed = @_listingWasSignedWith(listing,keys[name])
+            return name if signed        
+
+    _listingWasSignedWith: (listing,key)->
+
+        signerOptions = 
+            alg: 'RSA-SHA256'
+            hash: 'base64'
+
+        value = listing.uid + listing.signedBy
+
+        return signer.verifyStr( listing.signature, value, key, signerOptions )
 
     _verifySha1: (job, callback)->
 

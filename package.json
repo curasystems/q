@@ -1,13 +1,15 @@
 {
-  "name": "q",
-  "version": "0.1.0",
+  "name": "quartermaster",
+  "version": "0.2.0",
   "description": "q =",
   "main": "index.js",
   "scripts": {
     "test": "node test.js --reporter tap",
     "testing": "supervisor -e js,coffee -n exit -- test.js --reporter spec"
   },
-  "bin": { "q": "bin/q" },
+  "bin": {
+    "q": "bin/q"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/curasystems/q.git"
@@ -35,7 +37,8 @@
     "unzip": "~0.1.7",
     "fstream": "~0.1.22",
     "buffers": "~0.1.1",
-    "q-fs-store": "~0.1"
+    "q-fs-store": "~0.1",
+    "ssh-signer": "0.0.1"
   },
   "devDependencies": {
     "sinon": "~1.6.0",

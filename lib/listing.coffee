@@ -15,5 +15,4 @@ createListingFromFiles = (info, files,callback)->
         version: info.version
         files: ({name:f.name,sha1:f.sha1} for f in files)
 
-    listing.uid = calculateListingUid(listing)
     callback(null, listing)        
