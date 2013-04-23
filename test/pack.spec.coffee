@@ -185,7 +185,6 @@ describe 'packing folders into packages', ->
                     store: store
                     signedBy: 'your_email@example.com'
                     key: fs.readFileSync("#{__dirname}/id_rsa")
-                    passcode: 'test1234' 
 
                 q = new Q(options)        
                 p = q.pack TEST_FOLDER, (err)->
