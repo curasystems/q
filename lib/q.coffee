@@ -146,6 +146,7 @@ module.exports = class Q
         @listPackageContent packageIdentifier, (err,listing)=>
             return callback(err) if err
 
+            console.log listing.signedBy
             result = listing
             result.verified = true
             result.extraFiles = []

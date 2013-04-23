@@ -23,7 +23,13 @@ describe 'unpacking', ->
     beforeEach ->
         wrench.rmdirSyncRecursive TARGET_FOLDER if fs.existsSync TARGET_FOLDER
         store = new qStore(path:Q_CACHE_FOLDER)
-        q = new Q(store:store)   
+
+        options =
+            store: store
+            signedBy: 'your_email@example.com'
+            key: fs.readFileSync("#{__dirname}/id_rsa")
+
+        q = new Q(options)   
 
     it 'needs a path to package', ->
         expect( ()->q.unpack() ).to.throw(q.errors.ArgumentError, /package/)
