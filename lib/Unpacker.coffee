@@ -1,8 +1,10 @@
 fs = require('fs')
 
-fstream = require('fstream')
-unzip = require('unzip')
+path = require('path')
+
 mkdirp = require('mkdirp')
+AdmZip = require('adm-zip')
+streamBuffers = require('stream-buffers')
 
 errors = require('./errors')
 
@@ -16,9 +18,20 @@ module.exports = class Unpacker
             mkdirp targetDir, (err)=>
                 return callback(err) if err
 
-                targetDirWriter = fstream.Writer(targetDir)
-                packageStream.pipe( unzip.Parse() ).pipe( targetDirWriter )
+                zipBufferStream = new streamBuffers.WritableStreamBuffer()
+                packageStream.pipe(zipBufferStream)
 
-                targetDirWriter.on 'close', ()->
-                    callback()
-        
+                zipBufferStream.on 'close', ()->
+
+                    zip = new AdmZip(zipBufferStream.getContents())
+                    zipEntries = zip.getEntries()
+                    zipEntries.forEach (entry)->
+
+                        return if( entry.isDirectory )
+                            
+                        targetPath = path.join(targetDir, entry.entryName)
+                        mkdirp.sync path.dirname(targetPath)
+                        fs.writeFileSync targetPath, entry.getData()
+
+                    callback(null)
+            

@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "q =",
   "main": "index.js",
   "scripts": {
@@ -34,11 +34,14 @@
     "mkdirp": "~0.3.5",
     "js-yaml": "~2.0.4",
     "lazystream": "~0.1.0",
-    "unzip": "~0.1.7",
     "fstream": "~0.1.22",
     "buffers": "~0.1.1",
     "q-fs-store": "~0.1",
-    "ssh-signer": "0.0.1"
+    "ssh-signer": "0.0.1",
+    "colors": "~0.6.0-1",
+    "superagent": "~0.14.1",
+    "adm-zip": "~0.4.3",
+    "stream-buffers": "~0.2.4"
   },
   "devDependencies": {
     "sinon": "~1.6.0",
@@ -47,7 +50,8 @@
     "mocha": "~1.8.2",
     "async": "~0.2.6",
     "growl": "~1.7.0",
-    "wrench": "~1.4.4"
+    "wrench": "~1.4.4",
+    "longjohn": "~0.2.0"
   },
   "author": "Matthias Goetzke",
   "license": "BSD",

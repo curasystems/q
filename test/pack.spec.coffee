@@ -4,7 +4,8 @@ qStore = require 'q-fs-store'
 fs = require 'fs'
 path = require 'path'
 wrench = require 'wrench'
-unzip = require 'unzip'
+AdmZip = require 'adm-zip'
+streamBuffers = require('stream-buffers')
 
 {expect, sinon} = require './testing'
 sha1 = require '../lib/sha1'
@@ -140,41 +141,23 @@ describe 'packing folders into packages', ->
 
             describe 'the content saved in it', ->
 
-                file = null
+                packageEntries = null
 
                 beforeEach (done)->
-                    store.readPackage p.uid, (err,storedPackageStream)->
-                        file = storedPackageStream.pipe(unzip.Parse())
+                    store.getPackageStoragePath p.uid, (err,packagePath)=>
+                        packageEntries = new AdmZip(packagePath).getEntries()
                         done()
 
-                it 'the package content file is a zip file', (done)->
+                it 'the package content file is a zip file', ()->
+                    packageEntries.should.not.be.null
 
-                    onEntryHandler = sinon.spy()
-
-                    file.on 'entry', onEntryHandler
-                    file.on 'close', ()->
-                        onEntryHandler.should.have.been.called.once
-                        done()      
 
                 it 'contains a .q.listing file', (done)->
-                    foundListing = no
+                    done() for listing in packageEntries when listing.entryName == '.q.listing'
 
-                    file.on 'entry', (entry)->
-                        foundListing = true if entry.path is '.q.listing'
+                it 'contains all three files + listing', ()->
+                    packageEntries.length.should.equal(4)
 
-                    file.on 'close', ()->
-                        foundListing.should.be.true
-                        done()                    
-
-                it 'contains all three files + listing', (done)->
-                    fileCount = 0
-
-                    file.on 'entry', (entry)->
-                        fileCount++
-
-                    file.on 'close', ()->
-                        fileCount.should.equal(4)
-                        done()                    
                
         describe 'signing a package', ->
 

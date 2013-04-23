@@ -4,7 +4,8 @@ qStore = require 'q-fs-store'
 fs = require 'fs'
 path = require 'path'
 wrench = require 'wrench'
-unzip = require 'unzip'
+AdmZip = require 'adm-zip'
+streamBuffers = require('stream-buffers')
 
 {expect} = require './testing'
 
@@ -68,13 +69,18 @@ describe 'unpacking', ->
 
                 store.readPackage p.uid, (err,packageStream)->
 
-                    zip = packageStream.pipe(unzip.Parse())
-                    zip.on 'entry', (entry) ->
-                        unpackedPath = path.join(TARGET_FOLDER, entry.path)
-                        fs.existsSync(unpackedPath).should.be.true
-                        entry.autodrain()
+                    zipBufferStream = new streamBuffers.WritableStreamBuffer()
+                    packageStream.pipe(zipBufferStream)
+                    
+                    zipBufferStream.on 'close', ()->
+                        zip = new AdmZip(zipBufferStream.getContents())   
+                        entries = zip.getEntries()
 
-                    zip.on 'close', ()->done()
+                        entries.forEach (entry) ->
+                            unpackedPath = path.join(TARGET_FOLDER, entry.entryName)
+                            fs.existsSync(unpackedPath).should.be.true
+
+                        done()
 
             it 'can be verified against a sha1 value', (done)->
 

@@ -4,7 +4,8 @@ async = require('async')
 signer = require('ssh-signer')
 
 Buffers = require('buffers')
-unzip = require('unzip')
+AdmZip = require('adm-zip')
+streamBuffers = require('stream-buffers')
 _ = require('underscore')
 
 qStore = require 'q-fs-store'
@@ -15,6 +16,8 @@ Unpacker = require('./Unpacker')
 sha1 = require('./sha1')
 calculateListingUid = require('./calculateListingUid')
 listing = require('./listing')
+
+superagent = require('superagent')
 
 # Exports all errors
 module.exports = class Q
@@ -56,6 +59,28 @@ module.exports = class Q
             u = new Unpacker()
             u.unpack(packageStream, targetDir, callback)
 
+    publish: (packageIdentifier, targetUrl, callback)->
+        
+        @listPackageContent packageIdentifier, (err, content)=>
+            console.log err
+            return callback(err) if err
+            console.log content
+
+            @_readPackage packageIdentifier, (err, packageStream)=>
+                return callback(err) if err
+
+                    request = superagent.agent()
+
+                    ###                    
+                    request.get('/packages/my-package')
+                        .expect('Content-Type', /json/)
+                        .expect(200)
+                        .end (err,res)->
+                            expect(err).to.be.null
+                            res.body.should.contain('0.1.0')
+                            done(err)
+                    ###
+
     listPackageContent: (packageIdentifier, callback) ->        
         @_readPackage packageIdentifier, (err, packageStream)=>
             return callback(err) if err
@@ -74,25 +99,18 @@ module.exports = class Q
 
     _listPackageStreamContent: (packageStream, callback)->
         
-        zipClosed = no
         packageListing = null
 
-        zip = packageStream.pipe(unzip.Parse())
-        zip.on 'entry', (entry) =>
+        @_loadZip packageStream, (err,zip)=>
+            return callback(err) if err
+
+            zipEntries = zip.getEntries()
             
-            if @_isListingEntry entry
-                foundListing = yes
-                @_readObjectFromStream entry, (err, listingFound)->
-
-                    packageListing = listingFound
-
-                    if zipClosed
-                        callback(null, packageListing)
-            else
-                entry.autodrain()
-
-        zip.on 'close', ()=>
-            zipClosed = yes
+            zipEntries.forEach (entry)=>
+                if @_isListingEntry(entry)
+                    content = entry.getData().toString('utf8')
+                    packageListing = JSON.parse(content)
+        
             if not packageListing
                 callback(new @errors.NoListingError("No .q.listing file in package")) 
             else 
@@ -183,26 +201,32 @@ module.exports = class Q
 
         
             @_readPackage packageIdentifier, (err, packageStream)=>
-                zip = packageStream.pipe(unzip.Parse())
-                zip.on 'entry', (entry) ->
-                    
-                    if entry.path is '.q.listing'
-                        entry.autodrain()
-                    else
-                        listEntry = _.find listing.files, (f)->f.name is entry.path
+             
+                @_loadZip packageStream, (err,zip)=>
+                    return callback(err) if err
+
+                    zipEntries = zip.getEntries()
+
+                    zipEntries.forEach (entry)=>
+                        listEntry = _.find listing.files, (f)->f.name is entry.entryName
 
                         if not listEntry
-                            result.extraFiles.push( entry.path )
-                            entry.autodrain()
+                            if not @_isListingEntry entry
+                                result.extraFiles.push( entry.entryName )
                         else
-                            verifyQueue.push result:result, listEntry:listEntry, stream:entry
+                            verifyQueue.push result:result, listEntry:listEntry, data:entry.getData()
 
-                zip.on 'close', ()->
-                    if verifyQueue.length() == 0
+                    verifyQueue.drain = ()->
                         callback(null,result)
-                    else
-                        verifyQueue.drain = ()->
-                            callback(null,result)
+
+    
+    _loadZip: (stream, callback)=>
+        zipBufferStream = new streamBuffers.WritableStreamBuffer()
+        stream.pipe(zipBufferStream)
+
+        zipBufferStream.on 'close', ()->
+            zip = new AdmZip(zipBufferStream.getContents())
+            callback(null,zip)
 
     _findSigningKey: (listing, keys)->
 
@@ -222,16 +246,17 @@ module.exports = class Q
 
     _verifySha1: (job, callback)->
 
-        sha1.calculate job.stream, (err,hash)->
-            if job.listEntry.sha1 isnt hash
-                job.result.verified = false
-                job.listEntry.verified = false
-            else
-                job.listEntry.verified = true
+        hash = sha1.calculate job.data
 
-            callback(null)
+        if job.listEntry.sha1 isnt hash
+            job.result.verified = false
+            job.listEntry.verified = false
+        else
+            job.listEntry.verified = true
 
-    _isListingEntry: (entry)->entry.path is '.q.listing'
+        callback(null)
+
+    _isListingEntry: (entry)->entry.entryName is '.q.listing'
 
     _readObjectFromStream: (stream, callback)->
 

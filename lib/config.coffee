@@ -18,6 +18,10 @@ class Config
         config[key] = value
         @_writeSync(config)
 
+    load: (key)->
+        config = @_readSync()
+        return config[key]
+
     _readSync: ->
         if fs.existsSync @configPath
             config = fs.readFileSync @configPath, encoding:'utf8'
