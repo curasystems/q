@@ -54,7 +54,7 @@ onPublishCommand = (target, version, options)->
                     return printError(err.toString()) if err
 
     catch e
-        console.log e
+        console.log "ERROR:", e
 
 findDefaultPackageName = (callback)->
 

@@ -66,23 +66,32 @@ module.exports = class Q
         @listPackageContent packageIdentifier, (err, content)=>
             return callback(err) if err
             
-            @_readPackage packageIdentifier, (err, packageStream)=>
-                return callback(err) if err
+            request = superagent.agent()
+            
+            listPackagesUrl = "#{targetUrl}/packages/#{content.name}"
+            console.log listPackagesUrl
+            
+            request.get(listPackagesUrl)
+                .end (err,res)=>
+                    return callback(err) if err
 
-                request = superagent.agent()
-                
-                listPackagesUrl = "#{targetUrl}/packages/#{content.name}"
-                console.log listPackagesUrl
-                
-                request.get(listPackagesUrl)
-                    .end (err,res)->
-                        console.log res
-                        return callback(err) if err
-                        return callback('error') if res.status not 200
+                    if not (res.status is 200 or res.status is 404)
+                        return callback('error') 
 
-                        callback()
+                    @_uploadPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
+                        console.log res.status
+                        console.log "UPLOADED", err
 
+    _uploadPackage: (request, packageIdentifier, targetUrl, callback)->
 
+        @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
+            return callback(err) if err
+
+            console.log packagePath
+            req = request.post(targetUrl)
+                .attach(packageIdentifier+'.pkg', packagePath)
+                .end(callback)
+            
     listPackageContent: (packageIdentifier, callback) ->        
         @_readPackage packageIdentifier, (err, packageStream)=>
             return callback(err) if err
