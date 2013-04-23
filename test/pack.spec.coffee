@@ -192,7 +192,7 @@ describe 'packing folders into packages', ->
 
                     p.signed.should.be.true
                     p.signedBy.should.equal 'your_email@example.com'
-                    p.signature.should.equal 'yUk4A9/pvYBpc/bhKoP5O3wNFGHXBxnGTNPwtTkb5T7M+U3EIo3yv+tJq6mM4i5sh5DSfFUrf3rhUAQ6y3KBmZgG65ZI90yhf5kodptTcUZaZu3n2VGqRQ12BfwPfccTn4kTqPrAVJJN3qm5ojR5iUyobjJ6I1LfT63tToHowvGm3/NdtXmtpE131En9dvFqyHkEcQYGRaesRRQsyoS7NaZQn/ULns6qHwOnDBE9/lyxl0LEp80jZEMe9UHiF1Ax79eWcLq4Pq5RIv0GqJGH1/i9GvQVyYSH8++uutrqS2nQC5SnQR5gw0OK2GuZGIDV0G45Nd3plAlXwSnV5hO53w=='
+                    p.signature.should.equal 'iSSS1QmvOgvXqc27nh5x682rQE1bMeQDq2kX0jlxEpnXjED73tcFK7ucdTtHA5GgwtkqaZThJJBW3F8cYu3vZGB7HHR7myZ3akWDAgbXz8bKwYUvuS5sY+dOAbm5aAypsSU104uuszccvSZsfxGq1E23AGaXimHbx/Qb8U0FNEMASnU03idDfZIlVsAsZFQeyEd2F7XJJWUyYaLA34KJDAZo/MGjjoOMdSlU/YU6OUQEsZ61qk6XEhG8YhltojE9eST+AypAnpo0h0cokLnzj0Wgo5HSJ6/P4uy5SbEK9dDb16hCj3jU5MPSw0Bweo4V3mC2783zdaYU5qcO+6Hv4w=='
 
                     
 

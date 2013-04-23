@@ -82,8 +82,10 @@ module.exports = class Packer extends events.EventEmitter
 
     _signPackage: (cb)->
         if @options.key
+
             sign = crypto.createSign('RSA-SHA1')
             sign.write(new Buffer(@uid))
+            sign.write(new Buffer(@options.signedBy))
             @signature = sign.sign(@options.key, 'base64')
             @signedBy = @options.signedBy
             @signed = yes
