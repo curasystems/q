@@ -61,25 +61,27 @@ module.exports = class Q
 
     publish: (packageIdentifier, targetUrl, callback)->
         
+        require('https').globalAgent.options.rejectUnauthorized = false
+        
         @listPackageContent packageIdentifier, (err, content)=>
-            console.log err
             return callback(err) if err
-            console.log content
-
+            
             @_readPackage packageIdentifier, (err, packageStream)=>
                 return callback(err) if err
 
-                    request = superagent.agent()
+                request = superagent.agent()
+                
+                listPackagesUrl = "#{targetUrl}/packages/#{content.name}"
+                console.log listPackagesUrl
+                
+                request.get(listPackagesUrl)
+                    .end (err,res)->
+                        console.log res
+                        return callback(err) if err
+                        return callback('error') if res.status not 200
 
-                    ###                    
-                    request.get('/packages/my-package')
-                        .expect('Content-Type', /json/)
-                        .expect(200)
-                        .end (err,res)->
-                            expect(err).to.be.null
-                            res.body.should.contain('0.1.0')
-                            done(err)
-                    ###
+                        callback()
+
 
     listPackageContent: (packageIdentifier, callback) ->        
         @_readPackage packageIdentifier, (err, packageStream)=>

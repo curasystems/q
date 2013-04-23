@@ -50,7 +50,7 @@ onPublishCommand = (target, version, options)->
                 packageIdentifier = "#{packageName}@#{versionToPublish}"
 
                 console.log  "#{packageIdentifier} => #{targetServerUrl}"
-                q.publish packageIdentifier, version, (err)=>
+                q.publish packageIdentifier, targetServerUrl, (err)=>
                     return printError(err.toString()) if err
 
     catch e

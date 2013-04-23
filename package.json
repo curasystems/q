@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "q =",
   "main": "index.js",
   "scripts": {
