@@ -120,7 +120,7 @@ module.exports = class Q
     _verifyListing: (actualListing, expectedListing)->
 
         result = 
-            valid: actualListing.uid is expectedListing.uid
+            verified: actualListing.uid is expectedListing.uid
             filesManipulated: no
             uid: actualListing.uid
             files: actualListing.files
@@ -131,9 +131,9 @@ module.exports = class Q
             if not expectedFile 
                 actualFile.extra = yes
             else
-                actualFile.valid = actualFile.sha1 is expectedFile.sha1
-                result.valid = false unless actualFile.valid
-                result.filesManipulated = true unless actualFile.valid
+                actualFile.verified = actualFile.sha1 is expectedFile.sha1
+                result.verified = false unless actualFile.verified
+                result.filesManipulated = true unless actualFile.verified
 
         return result
 
@@ -147,7 +147,7 @@ module.exports = class Q
             return callback(err) if err
 
             result = listing
-            result.valid = true
+            result.verified = true
             result.extraFiles = []
         
             @_readPackage packageIdentifier, (err, packageStream)=>
@@ -176,10 +176,10 @@ module.exports = class Q
 
         sha1.calculate job.stream, (err,hash)->
             if job.listEntry.sha1 isnt hash
-                job.result.valid = false
-                job.listEntry.valid = false
+                job.result.verified = false
+                job.listEntry.verified = false
             else
-                job.listEntry.valid = true
+                job.listEntry.verified = true
 
             callback(null)
 

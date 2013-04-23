@@ -70,7 +70,7 @@ describe 'unpacking', ->
 
                 q.verifyDirectory TARGET_FOLDER, (err,result)->
                     expect(err).to.be.null
-                    result.valid.should.be.true
+                    result.verified.should.be.true
                     result.uid.should.equal 'b74ed98ef279f61233bad0d4b34c1488f8525f27'
                     done()
 
@@ -84,7 +84,7 @@ describe 'unpacking', ->
             
             it 'can be verified', (done)->
                 q.verifyPackage p.uid, (err,result)->
-                    result.valid.should.be.true
+                    result.verified.should.be.true
                     done()
                 
     describe 'verifying invalid extracted packages', ->
@@ -97,7 +97,7 @@ describe 'unpacking', ->
 
             q.verifyDirectory TARGET_FOLDER, (err,result)->
                 expect(err).to.be.null
-                result.valid.should.be.false
+                result.verified.should.be.false
                 result.uid.should.not.equal 'b74ed98ef279f61233bad0d4b34c1488f8525f27'
                 done()
 
@@ -108,9 +108,9 @@ describe 'unpacking', ->
                 
                 result.filesManipulated.should.be.true
                 
-                invalidFile = f for f in result.files when f.valid is false
+                invalidFile = f for f in result.files when f.verified is false
                 invalidFile.name.should.equal 'content/deep.txt'
-                invalidFile.valid.should.be.false
+                invalidFile.verified.should.be.false
                 
                 done()
 
@@ -122,17 +122,17 @@ describe 'unpacking', ->
 
         it 'marks any files no contained in the listing as extra', (done)->
             q.verifyDirectory TARGET_FOLDER, (err,result)->
-                result.valid.should.be.false
+                result.verified.should.be.false
                 
                 extraFile = f for f in result.files when f.extra
                 extraFile.name.should.equal 'extra.txt'
-                expect(extraFile.valid).to.be.undefined
+                expect(extraFile.verified).to.be.undefined
                 
                 done()
 
         it 'the result is not valid but the property filesManipulated is false', (done)->
             q.verifyDirectory TARGET_FOLDER, (err,result)->
-                result.valid.should.be.false
+                result.verified.should.be.false
                 result.filesManipulated.should.be.false
                 
                 done()
@@ -147,18 +147,18 @@ describe 'unpacking', ->
 
         it 'invalid packets lists the manipulated files', (done)->
             q.verifyPackage MANIPULATED_PACKAGE, (err,result)->
-                result.valid.should.be.false
+                result.verified.should.be.false
                 
-                invalidFile = f for f in result.files when f.valid is false
+                invalidFile = f for f in result.files when f.verified is false
                 invalidFile.name.should.equal 'content/deep.txt'
-                invalidFile.valid.should.be.false
+                invalidFile.verified.should.be.false
                 
                 done()
 
         it 'collects files in the zip that are not part of the listing in an extra property', (done)->
 
             q.verifyPackage EXTRA_FILES_PACKAGE, (err,result)->
-                result.valid.should.be.true
+                result.verified.should.be.true
                 result.extraFiles.should.not.be.empty
                 
                 done()                

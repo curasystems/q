@@ -7,7 +7,7 @@ lazystream = require('lazystream')
 
 async = require('async')
 semver = require('semver')
-
+crypto = require('crypto')
 _ = require('underscore')
 archiver = require('archiver')
 
@@ -49,6 +49,8 @@ module.exports = class Packer extends events.EventEmitter
                         cb(err,manifest)
                 ,(manifest, cb)=>
                     @_createListing(manifest, cb)
+                ,(cb)=>
+                    @_signPackage(cb)
             ],
             (err)=>
                 @emit 'end'
@@ -59,6 +61,7 @@ module.exports = class Packer extends events.EventEmitter
         @name = manifest.name
         @version = manifest.version
         @description = manifest.description
+        @signed = false
 
         if not @name 
             return callback(new errors.InvalidManifestError("missing package name"))
@@ -76,6 +79,15 @@ module.exports = class Packer extends events.EventEmitter
             @listing = directoryListing
             @uid = directoryListing.uid
             callback(null)
+
+    _signPackage: (cb)->
+        if @options.key
+            sign = crypto.createSign('RSA-SHA1')
+            sign.write(new Buffer(@uid))
+            @signature = sign.sign(@options.key, 'base64')
+            @signedBy = @options.signedBy
+            @signed = yes
+        cb()
 
     saveToCache: (callback)->
         
