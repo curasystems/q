@@ -69,7 +69,6 @@ module.exports = class Q
             request = superagent.agent()
             
             listPackagesUrl = "#{targetUrl}/packages/#{content.name}"
-            console.log listPackagesUrl
             
             request.get(listPackagesUrl)
                 .end (err,res)=>
@@ -80,15 +79,16 @@ module.exports = class Q
                         return callback('error') 
 
                     @_uploadPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
-                        console.log res.status
-                        console.log "UPLOADED", err
+                        if res.statusCode is 200 or res.statusCode is 202
+                            callback(null)
+                        else
+                            callback(res.statusCode)
 
     _uploadPackage: (request, packageIdentifier, targetUrl, callback)->
 
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
             return callback(err) if err
 
-            console.log packagePath
             req = request.post(targetUrl)
                 .attach(packageIdentifier+'.pkg', packagePath)
                 .end(callback)
@@ -156,7 +156,7 @@ module.exports = class Q
 
         result = 
             verified: actualListing.uid is expectedListing.uid
-            verificationErrors: []
+            errors: []
             filesManipulated: no
             uid: actualListing.uid
             files: actualListing.files
@@ -164,10 +164,13 @@ module.exports = class Q
         if @options.verifyRequiresSignature
             if actualListing.signature
                 result.verified = !!result.signed
-                result.verificationErrors.push( "could not find matching key for signature")
+                if not result.verified
+                        result.errors.push( "could not find matching key for signature")
+                    else
+                        console.log "verified: signedBy #{result.signed}"
             else
                 result.verified = no    
-                result.verificationErrors.push( "package has no signature" )
+                result.errors.push( "package has no signature" )
 
         result.files.forEach (actualFile)->
             expectedFile = _.find expectedListing.files, (f)->f.name is actualFile.name
@@ -183,19 +186,17 @@ module.exports = class Q
 
     verifyPackage: (packageIdentifier, callback) ->
 
-        verifyQueue = async.queue(@_verifySha1, 100)
-
         @listPackageContent packageIdentifier, (err,listing)=>
             return callback(err) if err
 
             result = listing
             result.verified = (listing.uid == calculateListingUid(listing))
 
-            result.verificationErrors = []
+            result.errors = []
             result.extraFiles = []
             
             if not result.verified 
-                result.verificationErrors.push( "listing uid does not match files" )
+                result.errors.push( "listing uid does not match files" )
 
             if @options.keys
                 if not listing.signature
@@ -208,18 +209,21 @@ module.exports = class Q
                 if listing.signature
                     result.verified = !!result.signed
                     if not result.verified
-                        result.verificationErrors.push( "could not find matching key for signature")
+                        result.errors.push( "could not find matching key for signature")
                     else
                         console.log "verified: signedBy #{result.signed}"
                 else
                     result.verified = no    
-                    result.verificationErrors.push( "package has no signature" )
+                    result.errors.push( "package has no signature" )
 
 
             @_readPackage packageIdentifier, (err, packageStream)=>
              
                 @_loadZip packageStream, (err,zip)=>
                     return callback(err) if err
+
+                    verifyQueue = async.queue(@_verifySha1, 1)
+                    verifyQueue.drain = ()->callback(null,result)
 
                     zipEntries = zip.getEntries()
 
@@ -232,8 +236,6 @@ module.exports = class Q
                         else
                             verifyQueue.push result:result, listEntry:listEntry, data:entry.getData()
 
-                    verifyQueue.drain = ()->
-                        callback(null,result)
 
     
     _loadZip: (stream, callback)=>

@@ -67,22 +67,18 @@ onPublishCommand = (target, version, options)->
 
     if not targetServerUrl
         return printError('target ' + "'#{target}'".red + ' unknown. Use ' + "'remote-add'".green + ' first.')
-    
-    try
-        findDefaultPackageName (err,packageName)->
-            return printError(err) if err
 
-            store.findHighest packageName, version, (err,versionToPublish)->
-                return printError("err") if err
+    findDefaultPackageName (err,packageName)->
+        return printError(err) if err
 
-                packageIdentifier = "#{packageName}@#{versionToPublish}"
+        store.findHighest packageName, version, (err,versionToPublish)->
+            return printError("err") if err
 
-                console.log  "#{packageIdentifier} => #{targetServerUrl}"
-                q.publish packageIdentifier, targetServerUrl, (err)=>
-                    return printError(err.toString()) if err
+            packageIdentifier = "#{packageName}@#{versionToPublish}"
 
-    catch e
-        console.log "ERROR:", e
+            console.log  "#{packageIdentifier} => #{targetServerUrl}"
+            q.publish packageIdentifier, targetServerUrl, (err)=>
+                return printError(err.toString()) if err                    
 
 findDefaultPackageName = (callback)->
 

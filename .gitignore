@@ -17,4 +17,4 @@ npm-debug.log
 *.sublime-project
 .q
 .cache
-.q-listing
+.q.listing
