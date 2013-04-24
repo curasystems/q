@@ -45,7 +45,7 @@ processFile = (directory, filePath, callback)->
             path: fullPath
             sha1: null
 
-        sha1.calculate fs.createReadStream(fullPath, encoding:'utf8'), (err,hash)->
+        sha1.calculate fs.createReadStream(fullPath), (err,hash)->
 
             entry.sha1 = hash
             callback(null, entry)

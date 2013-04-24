@@ -73,6 +73,7 @@ module.exports = class Q
             
             request.get(listPackagesUrl)
                 .end (err,res)=>
+            
                     return callback(err) if err
 
                     if not (res.status is 200 or res.status is 404)
@@ -201,16 +202,20 @@ module.exports = class Q
                     result.signed = null
                 else
                     result.signed = @_findSigningKey listing, @options.keys
+                    
 
             if @options.verifyRequiresSignature
                 if listing.signature
                     result.verified = !!result.signed
-                    result.verificationErrors.push( "could not find matching key for signature")
+                    if not result.verified
+                        result.verificationErrors.push( "could not find matching key for signature")
+                    else
+                        console.log "verified: signedBy #{result.signed}"
                 else
                     result.verified = no    
                     result.verificationErrors.push( "package has no signature" )
 
-        
+
             @_readPackage packageIdentifier, (err, packageStream)=>
              
                 @_loadZip packageStream, (err,zip)=>
