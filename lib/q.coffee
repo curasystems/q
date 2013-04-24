@@ -78,6 +78,10 @@ module.exports = class Q
                     if not (res.status is 200 or res.status is 404)
                         return callback('error') 
 
+                    for existingVersionOnServer in res.body
+                        if content.version is existingVersionOnServer 
+                            return callback('ERR: version already on target server')
+
                     @_uploadPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
                         if res.statusCode is 200 or res.statusCode is 202
                             callback(null)
