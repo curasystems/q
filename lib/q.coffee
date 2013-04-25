@@ -73,66 +73,48 @@ module.exports = class Q
             request = superagent.agent()
             
             packageUrl = "#{targetUrl}/packages/#{content.name}"
-            
-            request.get(packageUrl).end (err,res)=>
-            
-                    return callback(err) if err
+            latestServerPackageUrl = "#{packageUrl}/latest"
 
-                    if not (res.status is 200 or res.status is 404)
-                        return callback('error') 
+            request.get(latestServerPackageUrl).end (err,res)=>
+        
+                return callback(err) if err
 
-                    if _.isArray(res.body)
-                        serverVersions = res.body
-                    else
-                        serverVersions = []
-                    
-                    for existingVersionOnServer in serverVersions
-                        if content.version is existingVersionOnServer 
-                            return callback('version already on target server')
+                if res.status is 404 or not @options.patch
+                    @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
+                        return callback(null) if res.ok
+                            
+                        callback(res.statusCode)
+                else
+                    return callback('error') if not res.ok
 
-                    if not serverVersions or serverVersions.length == 0
+                    latestServerPackage = res.body
+
+                    if latestServerPackage.version == content.version
+                        return callback('version already on target server')
+
+                    @_attemptUploadPatch packageIdentifier, latestServerPackage, packageUrl, request, (err)=>
+                        
+                        return callback(null) unless err
+                        console.log "could not upload patch trying full upload", err
+                        return
+                        
                         @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
                             return callback(null) if res.ok
-                                
-                            callback(res.statusCode)                        
-                    else
-                        @_attemptUploadPatch packageIdentifier, serverVersions, packageUrl, request, (err)=>
                             
-                            return callback(null) unless err
-                            console.log "could not upload patch trying full upload"
-                            
-                            @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
-                                return callback(null) if res.ok
-                                
-                                callback(res.statusCode)
+                            callback(res.statusCode)
 
-    _attemptUploadPatch: (packageIdentifier, serverVersions, packageUrl, request, callback)->
-
-        return callback('patches disabled') unless @options.patch
-                    
+    _attemptUploadPatch: (packageIdentifier, serverPackageInfo, packageUrl, request, callback)->
+            
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
             return callback(err) if err
            
             return callback('too small') if fs.statSync(packagePath).size / 1024 < @options.minForPatch
-            
-            previousVersion = @options.store.highestVersionOf(serverVersions)
-
-            return callback('no prev version to patch against') unless previousVersion
-
-            previousVersionUrl = "#{packageUrl}/#{previousVersion}"
-            downloadUrl = "#{previousVersionUrl}/download"
-
-            downloadRequest = request.get(downloadUrl)
-                
-            downloadPath = temp.path(suffix:'.pkg')
-            downloadStream = fs.createWriteStream(downloadPath)
-            downloadRequest.pipe(downloadStream)
-
-            downloadStream.on 'close',(err)=>
+           
+            @_accessPreviousPackagePathForDiff serverPackageInfo, packageUrl, request, (err,previousVersionPath,args)=>
                 return callback(err) if err
 
                 patchPath = temp.path(suffix:'.patch')
-                bs.diff downloadPath, packagePath, patchPath, (err)=>
+                bs.diff previousVersionPath, packagePath, patchPath, (err)=>
                     return callback(err) if err
 
                     originalSize = fs.statSync(packagePath).size
@@ -140,11 +122,37 @@ module.exports = class Q
                     savedBytes = originalSize-patchSize
 
                     console.log "uploading #{humanize.filesize(patchSize)} ... (saved #{humanize.filesize(savedBytes)})"
-
+                    previousVersionUrl = "#{packageUrl}/#{serverPackageInfo.version}"
                     @_uploadPatch request, patchPath, previousVersionUrl, (err)=>
                         fs.unlinkSync(patchPath)
-                        fs.unlinkSync(downloadPath)
+                        fs.unlinkSync(previousVersionPath) if args.deleteAfterUse
                         callback(err)
+
+    _accessPreviousPackagePathForDiff: (serverPackageInfo, serverPackageUrl, request, callback)->
+
+        @options.store.getInfo serverPackageInfo.name, serverPackageInfo.version, (err, localInfo)=>
+
+            canUseLocalPackageForDiff = (not err and serverPackageInfo.uid is localInfo.uid)
+
+            if canUseLocalPackageForDiff
+                @options.store.getPackageStoragePath "#{serverPackageInfo.name}@#{serverPackageInfo.version}", (err, packagePath)=>
+                    return callback(err) if err
+                    callback(null, packagePath, deleteAfterUse:false)
+            else
+                console.log "previous version not locally available or usable, downloading..."
+
+                previousVersionUrl = "#{serverPackageUrl}/#{serverPackageInfo.version}"
+                downloadUrl = "#{previousVersionUrl}/download"
+
+                downloadRequest = request.get(downloadUrl)
+                    
+                downloadPath = temp.path(suffix:'.pkg')
+                downloadStream = fs.createWriteStream(downloadPath)
+                downloadRequest.pipe(downloadStream)
+
+                downloadStream.on 'close',(err)=>
+                    return callback(err) if err           
+                    callback(null, downloadPath, deleteAfterUse:true)
 
     _uploadPatch: (request, patchPath, previousVersionUrl, callback)->
         patchUrl = "#{previousVersionUrl}/patch"
