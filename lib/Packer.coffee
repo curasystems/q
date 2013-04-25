@@ -88,7 +88,7 @@ module.exports = class Packer extends events.EventEmitter
         if @options.key and @options.signedBy
 
             signerOptions = 
-                alg: 'RSA-SHA256'
+                alg: 'hmac-sha256'
                 hash: 'base64'
 
             key = @options.key

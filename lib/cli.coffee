@@ -2,6 +2,9 @@ util = require('util')
 path = require('path')
 fs = require('fs')
 
+#require('longjohn') // resource intensive for debugging
+
+
 path_extra = require('path-extra')
 colors = require('colors')
 
@@ -56,8 +59,6 @@ onConfigSet = (key,value)->
 
 onConfigGet = (key)->
     console.log "#{key} = " + config.read key
-
-require('longjohn')
 
 onPublishCommand = (target, version, options)->
  
