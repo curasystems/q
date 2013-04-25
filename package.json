@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "q =",
   "main": "index.js",
   "scripts": {
@@ -42,7 +42,9 @@
     "superagent": "~0.14.1",
     "adm-zip": "~0.4.3",
     "stream-buffers": "~0.2.4",
-    "path-extra": "~0.1.0"
+    "path-extra": "~0.1.0",
+    "temp": "~0.5.0",
+    "bsdiff-bin": "~0.1.0"
   },
   "devDependencies": {
     "sinon": "~1.6.0",

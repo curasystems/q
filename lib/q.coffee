@@ -1,23 +1,24 @@
 path = require('path')
 fs = require('fs')
-async = require('async')
-signer = require('ssh-signer')
 
+_ = require('underscore')
 Buffers = require('buffers')
 AdmZip = require('adm-zip')
+async = require('async')
+signer = require('ssh-signer')
 streamBuffers = require('stream-buffers')
-_ = require('underscore')
-
-qStore = require 'q-fs-store'
+temp = require('temp')
+sha1 = require('./sha1')
+superagent = require('superagent')
+qStore = require('q-fs-store')
+bs = require('bsdiff-bin')
 
 Packer = require('./Packer')
 Unpacker = require('./Unpacker')
 
-sha1 = require('./sha1')
 calculateListingUid = require('./calculateListingUid')
 listing = require('./listing')
 
-superagent = require('superagent')
 
 # Exports all errors
 module.exports = class Q
@@ -25,6 +26,8 @@ module.exports = class Q
     DEFAULT_OPTIONS = 
         store:new qStore(path:process.cwd())
         verifyRequiresSignature: yes
+        minForPatch: 128 # packages smaller than 'minForDiff' kb are uploaded without diff
+        patch: yes
     
     constructor: (options={})->
         @options = _.defaults options, DEFAULT_OPTIONS
@@ -61,37 +64,96 @@ module.exports = class Q
 
     publish: (packageIdentifier, targetUrl, callback)->
         
-        require('https').globalAgent.options.rejectUnauthorized = false
-        
         @listPackageContent packageIdentifier, (err, content)=>
             return callback(err) if err
             
             request = superagent.agent()
             
-            listPackagesUrl = "#{targetUrl}/packages/#{content.name}"
+            packageUrl = "#{targetUrl}/packages/#{content.name}"
             
-            request.get(listPackagesUrl)
-                .end (err,res)=>
+            request.get(packageUrl).end (err,res)=>
             
                     return callback(err) if err
 
                     if not (res.status is 200 or res.status is 404)
                         return callback('error') 
 
-                    for existingVersionOnServer in res.body
+                    if _.isArray(res.body)
+                        serverVersions = res.body
+                    else
+                        serverVersions = []
+                    
+                    for existingVersionOnServer in serverVersions
                         if content.version is existingVersionOnServer 
-                            return callback('ERR: version already on target server')
+                            return callback('version already on target server')
 
-                    @_uploadPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
-                        if res.statusCode is 200 or res.statusCode is 202
-                            callback(null)
-                        else
-                            callback(res.statusCode)
+                    if not serverVersions or serverVersions.length == 0
+                        @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
+                            return callback(null) if res.ok
+                                
+                            callback(res.statusCode)                        
+                    else
+                        @_attemptUploadPatch packageIdentifier, serverVersions, packageUrl, request, (err)=>
+                            
+                            return callback(null) unless err
+                            console.log "could not upload patch trying full upload"
+                            
+                            @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
+                                return callback(null) if res.ok
+                                
+                                callback(res.statusCode)
 
-    _uploadPackage: (request, packageIdentifier, targetUrl, callback)->
+    _attemptUploadPatch: (packageIdentifier, serverVersions, packageUrl, request, callback)->
+
+        return callback('patches disabled') unless @options.patch
+                    
+        @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
+            return callback(err) if err
+           
+            return callback('too small') if fs.statSync(packagePath).size / 1024 < @options.minForPatch
+            
+            console.log "ATTEMPTING PATCH for ", packagePath
+                
+            previousVersion = @options.store.highestVersionOf(serverVersions)
+
+            return callback('no prev version to patch against') unless previousVersion
+
+            previousVersionUrl = "#{packageUrl}/#{previousVersion}"
+            downloadUrl = "#{previousVersionUrl}/download"
+
+            downloadRequest = request.get(downloadUrl)
+                
+            downloadPath = temp.path(suffix:'.pkg')
+            downloadStream = fs.createWriteStream(downloadPath)
+            downloadRequest.pipe(downloadStream)
+
+            downloadStream.on 'close',(err)=>
+                return callback(err) if err
+
+                patchPath = temp.path(suffix:'.patch')
+                bs.diff downloadPath, packagePath, patchPath, (err)=>
+                    return callback(err) if err
+
+                    @_uploadPatch request, patchPath, previousVersionUrl, (err)=>
+                        fs.unlinkSync(patchPath)
+                        fs.unlinkSync(downloadPath)
+                        callback(err)
+
+    _uploadPatch: (request, patchPath, previousVersionUrl, callback)->
+        patchUrl = "#{previousVersionUrl}/patch"
+        request.post(patchUrl)
+            .attach('upload.patch', patchPath)
+            .end (err,res)->
+                return callback(err) if err
+                return callback(res.statusCode) unless res.ok
+                callback(null)
+
+    _uploadFullPackage: (request, packageIdentifier, targetUrl, callback)->
 
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
             return callback(err) if err
+
+            console.log "uploading ##{fs.statSync(packagePath).size} bytes..."
 
             req = request.post(targetUrl)
                 .attach(packageIdentifier+'.pkg', packagePath)

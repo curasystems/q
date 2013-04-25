@@ -27,6 +27,11 @@ Q_Config = require('./config')
 config = Q_Config.open( path.join(Q_CACHE_FOLDER, "config.json") )
 
 #
+# Allow self-signed server certs
+#
+require('https').globalAgent.options.rejectUnauthorized = false
+        
+#
 # Commands
 #
 onPackCommand = (options)->
@@ -77,8 +82,7 @@ onPublishCommand = (target, version, options)->
             return printError("err") if err
 
             packageIdentifier = "#{packageName}@#{versionToPublish}"
-
-            console.log  "#{packageIdentifier} => #{targetServerUrl}"
+            
             q.publish packageIdentifier, targetServerUrl, (err)=>
                 return printError(err.toString()) if err                    
 
