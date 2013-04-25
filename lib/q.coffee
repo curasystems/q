@@ -122,6 +122,7 @@ module.exports = class Q
                     savedBytes = originalSize-patchSize
 
                     console.log "uploading #{humanize.filesize(patchSize)} ... (saved #{humanize.filesize(savedBytes)})"
+                    
                     previousVersionUrl = "#{packageUrl}/#{serverPackageInfo.version}"
                     @_uploadPatch request, patchPath, previousVersionUrl, (err)=>
                         fs.unlinkSync(patchPath)

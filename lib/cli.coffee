@@ -24,7 +24,11 @@ q = new Q(store:store)
 # Config
 #
 Q_Config = require('./config')
-config = Q_Config.open( path.join(Q_CACHE_FOLDER, "config.json") )
+
+localConfigPath = path.join(Q_CACHE_FOLDER, 'config.json')
+globalConfigPath = path.join(path_extra.homedir(), '.q', 'config.json')
+
+config = Q_Config.open( localConfigPath, globalConfigPath )
 
 #
 # Allow self-signed server certs
@@ -58,15 +62,25 @@ onPackCommand = (options)->
         else
             console.log 'Packed: ' + p.name.green + "@" + p.version.white.green + " (#{p.uid})"
 
-onRemoteAdd = (name,url)->
-    config.save "remote.#{name}", url
+onRemoteAdd = (name,url,options)->
+    key = "remote.#{name}"
+    onConfigSet(key,url,options)
 
-onConfigSet = (key,value)->
-    config.save key, value
+onConfigSet = (key,value, options)->
+    if options.global
+        config.saveGlobal key, value
+    else
+        config.saveLocal key, value
+
+onConfigRemove = (key, options)->
+    if options.global
+        config.saveGlobal key, null
+    else
+        config.saveLocal key, null
+
 
 onConfigGet = (key)->
-    console.log "#{key} = " + config.read key
-
+    console.log "#{key} = " + config.load(key)
 
 onPublishCommand = (target, version, options)->
  
@@ -121,19 +135,25 @@ program.command('pack')
 
 program.command('remote-add <name> <url>')
     .description('add a remote to the local config')
+    .option('-g, --global', 'store in global config')
     .action onRemoteAdd
 
 program.command('set <key> <value>')
     .description('set the config key')
+    .option('-g, --global', 'store in global config')
     .action onConfigSet
 
-program.command('get <key> <value>')
+program.command('remove <key>')
+    .description('remove the config key')
+    .option('-g, --global', 'change global config')
+    .action onConfigRemove
+
+program.command('get <key>')
     .description('get the config key')
     .action onConfigGet
 
 program.command('publish <target> [version]')
-    .description('publish version of package to server.\ntarget is a remote server previously added with remote-add. the package is signed with the
-        current users public key from $HOME/.ssh/id_rsa')
+    .description('publish version of package to target server')
     .action onPublishCommand
 
 
