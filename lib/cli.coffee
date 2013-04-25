@@ -9,7 +9,7 @@ Q_Store = require('q-fs-store')
 program = require('commander')
 
 #require('longjohn') only for debugging, very resource intensive
-require('graphdat')
+#require('graphdat')
 
 #
 # Prepare q to store in current directories .q folder
