@@ -139,7 +139,7 @@ module.exports = class Q
                     patchSize = fs.statSync(patchPath).size
                     savedBytes = originalSize-patchSize
 
-                    console.log "uploading ##{humanize.filesize(originalSize)} ... (saved ##{humanize.filesize(savedBytes)})"
+                    console.log "uploading #{humanize.filesize(patchSize)} ... (saved #{humanize.filesize(savedBytes)})"
 
                     @_uploadPatch request, patchPath, previousVersionUrl, (err)=>
                         fs.unlinkSync(patchPath)
@@ -154,7 +154,6 @@ module.exports = class Q
                 return callback(err) if err
                 return callback(res.statusCode) unless res.ok
                 callback(null)
-
     _uploadFullPackage: (request, packageIdentifier, targetUrl, callback)->
 
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>

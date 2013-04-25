@@ -55,6 +55,8 @@ onPackCommand = (options)->
     q.pack options.root, (err,p)=>
         if(err)
             printError "Error:".red + err.toString()
+        else
+            console.log 'Packed: ' + p.name.green + "@" + p.version.white.green + " (#{p.uid})"
 
 onRemoteAdd = (name,url)->
     config.save "remote.#{name}", url
