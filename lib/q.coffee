@@ -12,6 +12,7 @@ sha1 = require('./sha1')
 superagent = require('superagent')
 qStore = require('q-fs-store')
 bs = require('bsdiff-bin')
+humanize = require('humanize')
 
 Packer = require('./Packer')
 Unpacker = require('./Unpacker')
@@ -64,6 +65,8 @@ module.exports = class Q
 
     publish: (packageIdentifier, targetUrl, callback)->
         
+        console.log "#{packageIdentifier} => #{targetUrl}"
+
         @listPackageContent packageIdentifier, (err, content)=>
             return callback(err) if err
             
@@ -132,6 +135,12 @@ module.exports = class Q
                 bs.diff downloadPath, packagePath, patchPath, (err)=>
                     return callback(err) if err
 
+                    originalSize = fs.statSync(packagePath).size
+                    patchSize = fs.statSync(patchPath).size
+                    savedBytes = originalSize-patchSize
+
+                    console.log "uploading ##{humanize.filesize(originalSize)} ... (saved ##{humanize.filesize(savedBytes)})"
+
                     @_uploadPatch request, patchPath, previousVersionUrl, (err)=>
                         fs.unlinkSync(patchPath)
                         fs.unlinkSync(downloadPath)
@@ -151,7 +160,8 @@ module.exports = class Q
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
             return callback(err) if err
 
-            console.log "uploading ##{fs.statSync(packagePath).size} bytes..."
+            packageSize = fs.statSync(packagePath).size            
+            console.log "uploading #{humanize.filesize(packageSize)} ..."
 
             req = request.post(targetUrl)
                 .attach(packageIdentifier+'.pkg', packagePath)
@@ -299,8 +309,6 @@ module.exports = class Q
                                 result.extraFiles.push( entry.entryName )
                         else
                             verifyQueue.push result:result, listEntry:listEntry, data:entry.getData()
-
-
     
     _loadZip: (stream, callback)=>
         zipBufferStream = new streamBuffers.WritableStreamBuffer()
