@@ -93,7 +93,7 @@ module.exports = class Q
 
     _splitIdentifier: (identifier)->
         
-        if identifier.indexOf('@')
+        if identifier.indexOf('@')>0
             [name, version] = identifier.split('@')
             return {name:name, version:version}
         else
@@ -112,16 +112,16 @@ module.exports = class Q
             latestServerPackageUrl = "#{packageUrl}/latest"
 
             request.get(latestServerPackageUrl).end (err,res)=>
-        
                 return callback(err) if err
 
-                if res.status is 404 or not @options.patch
-                    @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
+                if res.error or not @options.patch
+                    @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (err,res)->
+                        return callback(err) if err
                         return callback(null) if res.ok
                             
                         callback(res.statusCode)
                 else
-                    return callback('error') if not res.ok
+                    return callback(res.statusCode) if not res.ok
 
                     latestServerPackage = res.body
 
@@ -131,12 +131,13 @@ module.exports = class Q
                     @_attemptUploadPatch packageIdentifier, latestServerPackage, packageUrl, request, (err)=>
                         
                         return callback(null) unless err
-                        console.log "could not upload patch trying full upload", err
-                        return
-                        
-                        @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (res)->
+                        console.log "could not upload patch trying full upload"
+                        console.log err
+                                                
+                        @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (err,res)->
+                            return callback(err) if err
                             return callback(null) if res.ok
-                            
+                  
                             callback(res.statusCode)
 
     _attemptUploadPatch: (packageIdentifier, serverPackageInfo, packageUrl, request, callback)->
@@ -199,6 +200,7 @@ module.exports = class Q
                 return callback(err) if err
                 return callback(res.statusCode) unless res.ok
                 callback(null)
+
     _uploadFullPackage: (request, packageIdentifier, targetUrl, callback)->
 
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>

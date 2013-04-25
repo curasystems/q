@@ -58,7 +58,7 @@ onPackCommand = (options)->
 
     q.pack options.root, (err,p)=>
         if(err)
-            printError "Error:".red + err.toString()
+            printError err
         else
             console.log 'Packed: ' + p.name.green + "@" + p.version.white.green + " (#{p.uid})"
 
@@ -93,12 +93,12 @@ onPublishCommand = (target, version, options)->
             return printError(err) if err
 
             store.findHighest packageName, version, (err,versionToPublish)->
-                return printError("err") if err
+                return printError(err) if err
 
                 packageIdentifier = "#{packageName}@#{versionToPublish}"
                 
                 q.publish packageIdentifier, targetServerUrl, (err)=>
-                    return printError(err.toString()) if err                    
+                    return printError(err) if err                    
 
 lookupServerUrl = (target, callback)->
 
@@ -192,7 +192,3 @@ program.command('download <source> <identifier> [targetPath]')
     .action onDownloadCommand
 
 program.parse(process.argv);
-
-
-
-
