@@ -259,7 +259,7 @@ module.exports = class Q
     _listingWasSignedWith: (listing,key)->
 
         signerOptions = 
-            alg: 'hmac-sha256'
+            alg: 'RSA-SHA256'
             hash: 'base64'
 
         value = listing.uid + listing.signedBy
