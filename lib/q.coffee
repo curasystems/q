@@ -112,8 +112,6 @@ module.exports = class Q
            
             return callback('too small') if fs.statSync(packagePath).size / 1024 < @options.minForPatch
             
-            console.log "ATTEMPTING PATCH for ", packagePath
-                
             previousVersion = @options.store.highestVersionOf(serverVersions)
 
             return callback('no prev version to patch against') unless previousVersion
