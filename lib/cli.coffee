@@ -8,6 +8,9 @@ colors = require('colors')
 Q_Store = require('q-fs-store')
 program = require('commander')
 
+#require('longjohn') only for debugging, very resource intensive
+require('graphdat')
+
 #
 # Prepare q to store in current directories .q folder
 #
@@ -57,7 +60,6 @@ onConfigSet = (key,value)->
 onConfigGet = (key)->
     console.log "#{key} = " + config.read key
 
-require('longjohn')
 
 onPublishCommand = (target, version, options)->
  
