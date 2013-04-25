@@ -85,22 +85,29 @@ onConfigGet = (key)->
 onPublishCommand = (target, version, options)->
  
     version ?= '*'
-    targetServerUrl = config.load("remote.#{target}")
 
-
-    if not targetServerUrl
-        return printError('target ' + "'#{target}'".red + ' unknown. Use ' + "'remote-add'".green + ' first.')
-
-    findDefaultPackageName (err,packageName)->
+    lookupServerUrl target, (err,targetServerUrl)->
         return printError(err) if err
 
-        store.findHighest packageName, version, (err,versionToPublish)->
-            return printError("err") if err
+        findDefaultPackageName (err,packageName)->
+            return printError(err) if err
 
-            packageIdentifier = "#{packageName}@#{versionToPublish}"
-            
-            q.publish packageIdentifier, targetServerUrl, (err)=>
-                return printError(err.toString()) if err                    
+            store.findHighest packageName, version, (err,versionToPublish)->
+                return printError("err") if err
+
+                packageIdentifier = "#{packageName}@#{versionToPublish}"
+                
+                q.publish packageIdentifier, targetServerUrl, (err)=>
+                    return printError(err.toString()) if err                    
+
+lookupServerUrl = (target, callback)->
+
+    targetServerUrl = config.load("remote.#{target}")
+
+    if not targetServerUrl
+        callback('target ' + "'#{target}'".red + ' unknown. Use ' + "'remote-add'".green + ' first.')
+    else
+        callback(null, targetServerUrl)
 
 findDefaultPackageName = (callback)->
 
@@ -118,9 +125,32 @@ findDefaultPackageName = (callback)->
 
         callback(null, packageName)
 
+onDownloadCommand = (source, identifier, targetPath, options)->
+
+    if options.store
+        storePath = path.resolve(options.store)
+        store = new Q_Store(path:storePath)
+        q = new Q(store:store)
+        console.log "INFO: Using store '#{storePath}'"
+
+    lookupServerUrl source, (err,sourceServerUrl)->
+        return printError(err) if err
+
+        downloadPath = identifier+'.download'
+        targetStream = fs.createWriteStream(downloadPath)
+        
+        q.download identifier, sourceServerUrl, targetStream, (err, info)->
+            if err
+                fs.unlinkSync(downloadPath)
+                printError(err)
+            else
+                finalPath = "#{info.name}@#{info.version}.pkg"
+                fs.renameSync(downloadPath, finalPath)
+                console.log 'downloaded to ' + "#{finalPath}".green
+                
 
 printError = (err)->
-    console.error("ERROR", err)
+    console.error("ERR ".red.inverse, err)
 
 #
 # Parse command line via commander
@@ -156,6 +186,10 @@ program.command('publish <target> [version]')
     .description('publish version of package to target server')
     .action onPublishCommand
 
+program.command('download <source> <identifier> [targetPath]')
+    .description('download latest package matching identifier to path')
+    .option('-s, --store [storepath]', 'use store to optimize download')    
+    .action onDownloadCommand
 
 program.parse(process.argv);
 

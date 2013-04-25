@@ -63,6 +63,42 @@ module.exports = class Q
             u = new Unpacker()
             u.unpack(packageStream, targetDir, callback)
 
+    download: (identifier, serverUrl, targetStream, callback)->
+        
+        {name, version} = @_splitIdentifier(identifier)
+
+        request = superagent.agent()
+
+        packageInfoUrl = "#{serverUrl}/packages/#{name}/#{version}"
+        console.log packageInfoUrl
+
+        request.get(packageInfoUrl).end (error,response)=>
+
+            return callback('not found') if response.notFound    
+            return callback('communication error:' + response.statusCode) unless response.ok
+
+            packageInfo = response.body
+
+            @options.store.readPackage packageInfo.uid, (err,localStream)=>
+
+                targetStream.on 'close', ()->
+                    callback(error, packageInfo)
+
+                if err
+                    downloadUrl = "#{serverUrl}/packages/#{packageInfo.name}/#{packageInfo.version}/download"
+                    downloadRequest = request.get(downloadUrl)
+                    downloadRequest.pipe(targetStream)
+                else
+                    localStream.pipe(targetStream)
+
+    _splitIdentifier: (identifier)->
+        
+        if identifier.indexOf('@')
+            [name, version] = identifier.split('@')
+            return {name:name, version:version}
+        else
+            return {name:identifier, version:'latest'}
+
     publish: (packageIdentifier, targetUrl, callback)->
         
         console.log "#{packageIdentifier} => #{targetUrl}"
