@@ -131,7 +131,7 @@ onDownloadCommand = (source, identifier, targetPath, options)->
         storePath = path.resolve(options.store)
         store = new Q_Store(path:storePath)
         q = new Q(store:store)
-        console.log "INFO: Using store '#{storePath}'"
+        console.log "INFO: Using store '#{storePath}' to optimize download "
 
     lookupServerUrl source, (err,sourceServerUrl)->
         return printError(err) if err

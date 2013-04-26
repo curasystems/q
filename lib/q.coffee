@@ -85,11 +85,64 @@ module.exports = class Q
                     callback(error, packageInfo)
 
                 if err
-                    downloadUrl = "#{serverUrl}/packages/#{packageInfo.name}/#{packageInfo.version}/download"
-                    downloadRequest = request.get(downloadUrl)
-                    downloadRequest.pipe(targetStream)
+                    packageDownloadUrl = "#{packageInfoUrl}/download"
+                    @_downloadPackage( name, packageDownloadUrl, request, targetStream )
                 else
                     localStream.pipe(targetStream)
+
+    _downloadPackage: ( packageName, downloadUrl, request, targetStream)->
+
+        @options.store.findHighest packageName, '*', (err, highestLocalVersion)=>
+            return @_downloadFullPackage(downloadUrl, request, targetStream) if(err)
+
+            @_downloadPackageAsPatch(packageName, highestLocalVersion, downloadUrl, request, targetStream)
+   
+    _downloadPackageAsPatch: (packageName, localVersionToUse, downloadUrl, request, targetStream)->
+
+        console.log "INFO:".green + " trying to download patch against local #{localVersionToUse}"
+
+        @options.store.getInfo packageName, localVersionToUse, (err,localPackageInfo)=>
+            return @_downloadFullPackage(downloadUrl, request, targetStream) if err
+
+            downloadPatchRequest = request.get(downloadUrl).query( patchFrom:localPackageInfo.uid )
+
+            tempPath = temp.path(suffix:'.temp')
+
+            downloadResponse = null
+            downloadPatchRequest.on 'response', (res)->
+                downloadResponse = res
+
+            tempPathStream = fs.createWriteStream(tempPath)
+            downloadPatchRequest.pipe(tempPathStream)
+
+            tempPathStream.on 'close', ()=>
+                if downloadResponse.headers['content-disposition'].indexOf('.patch')>0
+                    temporaryFullPath = temp.path(suffix:'.pkg')
+                    @_createPackageFromPatch localPackageInfo.uid,temporaryFullPath,tempPath, (err)=>
+                        if err
+                            return @_downloadFullPackage(downloadUrl, request, targetStream) 
+                        packageStream = fs.createReadStream(temporaryFullPath)
+                        packageStream.pipe(targetStream)
+                else if downloadResponse.headers['content-disposition'].indexOf('.pkg')>0
+                    packageStream = fs.createReadStream(tempPath)                    
+                    packageStream.pipe(targetStream)
+                else
+                    console.log "do not understand returned data", downloadResponse.statusCode
+
+    _createPackageFromPatch: (sourcePackageUid, targetPath, patchPath, callback)->
+            
+        @options.store.getPackageStoragePath sourcePackageUid, (err,sourcePackagePath)->
+            return callback(err) if err
+
+            bs.patch sourcePackagePath, targetPath, patchPath, (err)->
+                callback(err)
+                    
+    _downloadFullPackage: (downloadUrl, request, targetStream)->
+
+        console.log "INFO:".green + " downloading full package..."
+        
+        downloadRequest = request.get(downloadUrl)
+        downloadRequest.pipe(targetStream)
 
     _splitIdentifier: (identifier)->
         
