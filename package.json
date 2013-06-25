@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "quartermaster is a small library to create compressed binary packages for distribution",
   "main": "index.js",
   "scripts": {
@@ -44,7 +44,8 @@
     "stream-buffers": "~0.2.4",
     "path-extra": "~0.1.0",
     "temp": "~0.5.0",
-    "bsdiff-bin": "~0.1.0"
+    "bsdiff-bin": "~0.1.0",
+    "humanize": "0.0.7"
   },
   "devDependencies": {
     "sinon": "~1.6.0",
