@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "0.2.9",
+  "version": "0.2.11",
   "description": "quartermaster is a small library to create compressed binary packages for distribution",
   "main": "index.js",
   "scripts": {
@@ -45,14 +45,14 @@
     "path-extra": "~0.1.0",
     "temp": "~0.5.0",
     "bsdiff-bin": "~0.1.0",
-    "humanize": "0.0.7"
+    "humanize": "0.0.7",
+    "async": "~0.2.6"
   },
   "devDependencies": {
     "sinon": "~1.6.0",
     "sinon-chai": "~2.3.1",
     "chai": "~1.5.0",
     "mocha": "~1.8.2",
-    "async": "~0.2.6",
     "growl": "~1.7.0",
     "wrench": "~1.4.4",
     "longjohn": "~0.2.0"
