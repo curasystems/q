@@ -34,6 +34,7 @@ config = Q_Config.open( localConfigPath, globalConfigPath )
 # Allow self-signed server certs
 #
 require('https').globalAgent.options.rejectUnauthorized = false
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
         
 #
 # Commands
