@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "quartermaster is a small library to create compressed binary packages for distribution",
   "main": "index.js",
   "scripts": {
