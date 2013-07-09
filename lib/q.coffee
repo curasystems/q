@@ -395,9 +395,6 @@ module.exports = class Q
                 @_loadZip packageStream, (err,zip)=>
                     return callback(err) if err
 
-                    verifyQueue = async.queue(@_verifySha1, 1)
-                    verifyQueue.drain = ()->callback(null,result)
-
                     zipEntries = zip.getEntries()
 
                     zipEntries.forEach (entry)=>
@@ -407,7 +404,9 @@ module.exports = class Q
                             if not @_isListingEntry entry
                                 result.extraFiles.push( entry.entryName )
                         else
-                            verifyQueue.push result:result, listEntry:listEntry, data:entry.getData()
+                            @_verifySha1 result:result, listEntry:listEntry, data:entry.getData()
+
+                    callback(null,result)
     
     _loadZip: (stream, callback)=>
         zipBufferStream = new streamBuffers.WritableStreamBuffer()
@@ -433,7 +432,7 @@ module.exports = class Q
 
         return signer.verifyStr( listing.signature, value, key, signerOptions )
 
-    _verifySha1: (job, callback)->
+    _verifySha1: (job)->
 
         hash = sha1.calculate job.data
 
@@ -442,8 +441,6 @@ module.exports = class Q
             job.listEntry.verified = false
         else
             job.listEntry.verified = true
-
-        callback(null)
 
     _isListingEntry: (entry)->entry.entryName is '.q.listing'
 
