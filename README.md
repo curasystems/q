@@ -10,9 +10,13 @@ Upload and download is optimized to transfer binary diffs to a q-server.
 
 **q** requires a package name, description, version and files to include/exclude. This is defined in the q.manifest.
 
+## Install
+
+    npm install -g quartermaster
+
 ## Command Line
 
-q --help 
+    q --help 
 
 ## Api
 
