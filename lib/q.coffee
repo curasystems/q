@@ -10,6 +10,7 @@ streamBuffers = require('stream-buffers')
 temp = require('temp')
 sha1 = require('./sha1')
 superagent = require('superagent')
+needle = require('needle')
 qStore = require('q-fs-store')
 bs = require('bsdiff-bin')
 humanize = require('humanize')
@@ -63,6 +64,51 @@ module.exports = class Q
             u = new Unpacker()
             u.unpack(packageStream, targetDir, callback)
 
+    listPackageVersions: (identifier, serverUrl, options, callback)->
+        
+        if typeof(options) is 'function'
+            callback = options
+            options = undefined
+
+        {name, version} = @_splitIdentifier(identifier, '')
+
+        packageInfoUrl = "#{serverUrl}/packages/#{name}?version=#{version}"
+
+        needle.get packageInfoUrl,options, (error, response, body)=>
+
+            return callback(error) if error
+            return callback("package '#{identifier}' not found on #{serverUrl}") if response.statusCode is 404    
+            return callback('communication error:' + response.statusCode) unless response.statusCode is 200
+
+            callback(null,body)
+
+    getPackageInfo: (identifier, serverUrl, options, callback)->
+ 
+      if typeof(options) is 'function'
+        callback = options
+        options = undefined
+
+      {name, version} = @_splitIdentifier(identifier,'')
+
+      matchingVersionsUrl = "#{serverUrl}/packages/#{name}?version=#{version}"
+
+      needle.get matchingVersionsUrl,options, (error, response, versions)=>
+        return callback(error) if error
+        return callback("package '#{identifier}' not found on #{serverUrl}") if response.statusCode is 404    
+        return callback('communication error:' + response.statusCode) unless response.statusCode is 200
+
+        latestVersion = versions[versions.length-1]
+
+        infoUrl = "#{serverUrl}/packages/#{name}/#{latestVersion}"
+
+        needle.get infoUrl, options, (error, response, info)=>
+
+          return callback(error) if error
+          return callback("package '#{identifier}' not found on #{serverUrl}") if response.statusCode is 404    
+          return callback('communication error:' + response.statusCode) unless response.statusCode is 200
+
+          callback(null,info)
+
     download: (identifier, serverUrl, targetStream, callback)->
         
         {name, version} = @_splitIdentifier(identifier)
@@ -70,7 +116,6 @@ module.exports = class Q
         request = superagent.agent()
 
         packageInfoUrl = "#{serverUrl}/packages/#{name}/#{version}"
-        console.log packageInfoUrl
 
         request.get(packageInfoUrl).end (error,response)=>
 
@@ -144,13 +189,13 @@ module.exports = class Q
         downloadRequest = request.get(downloadUrl)
         downloadRequest.pipe(targetStream)
 
-    _splitIdentifier: (identifier)->
+    _splitIdentifier: (identifier, defaultVersion='latest')->
         
         if identifier.indexOf('@')>0
             [name, version] = identifier.split('@')
             return {name:name, version:version}
         else
-            return {name:identifier, version:'latest'}
+            return {name:identifier, version:defaultVersion}
 
     publish: (packageIdentifier, targetUrl, callback)->
         
