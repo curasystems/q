@@ -47,6 +47,17 @@ describe 'packing folders into packages', ->
                 p.manifestPath.should.contain('package.json')
                 done()
 
+    describe 'packing folders with a component.json', ->
+
+        it 'works and takes name,version,description from the component.json', (done)->
+            q.pack "#{__dirname}/test-folder-component", (err, p)->
+                expect(err).to.be.null
+                p.name.should.equal('test-folder-component')
+                p.version.should.equal('0.2.5')
+                p.description.should.equal('a simple component project to package')
+                done()
+
+      
     describe 'packing test-folder-a', ->
         
         TEST_FOLDER = "#{__dirname}/test-folder-a"

@@ -19,22 +19,30 @@ class ManifestReader
         @manifestPath = null
         @qManifestPath = path.normalize path.join(@directoryPath, @manifestName)
         @packageJsonPath = path.normalize path.join(@directoryPath, 'package.json')
+        @componentJsonPath = path.normalize path.join(@directoryPath, 'component.json')
 
     readManifest: (callback)->
 
         fs.exists @packageJsonPath, (exists)=>
             if exists
-                @_attemptToLoadPackageJson (err)=>
+                @_attemptToLoadJson @packageJsonPath, (err)=>
                     return callback(err) if err
                     @_loadManifest (err)=>
                         callback(err, @manifestPath, @manifest)    
             else
-                @_loadManifest (err)=>
-                    callback(err, @manifestPath, @manifest)
+                fs.exists @componentJsonPath, (exists)=>
+                    if exists
+                        @_attemptToLoadJson @componentJsonPath, (err)=>
+                            return callback(err) if err
+                            @_loadManifest (err)=>
+                                callback(err, @manifestPath, @manifest)
+                    else
+                        @_loadManifest (err)=>
+                            callback(err, @manifestPath, @manifest)
 
-    _attemptToLoadPackageJson: (callback)->
+    _attemptToLoadJson: (jsonPath, callback)->
 
-        fs.readFile @packageJsonPath, encoding:'utf8', (err,content)=>
+        fs.readFile jsonPath, encoding:'utf8', (err,content)=>
 
             return callback(err) if err
 
