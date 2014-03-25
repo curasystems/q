@@ -119,6 +119,7 @@ module.exports = class Q
 
         request.get(packageInfoUrl).end (error,response)=>
 
+            console.log(packageInfoUrl, error)
             return callback('not found') if response.notFound    
             return callback('communication error:' + response.statusCode) unless response.ok
 
@@ -463,7 +464,7 @@ module.exports = class Q
 
     _findSigningKey: (listing, keys)->
 
-        for own name in Object.keys(keys)
+        for name in Object.keys(keys)
             signed = @_listingWasSignedWith(listing,keys[name])
             return name if signed        
 
@@ -474,7 +475,6 @@ module.exports = class Q
             hash: 'base64'
 
         value = listing.uid + listing.signedBy
-
         return signer.verifyStr( listing.signature, value, key, signerOptions )
 
     _verifySha1: (job)->

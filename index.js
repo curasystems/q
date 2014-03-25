@@ -1,4 +1,3 @@
-require('coffee-script');
-require('source-map-support').install( {handleUncaughtExceptions:false} );
+require('coffee-script/register');
 
 module.exports = require('./lib/q');
