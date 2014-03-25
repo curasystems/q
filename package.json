@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "quartermaster is a small library to create compressed binary packages for distribution",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,9 @@
   "bin": {
     "q": "bin/q"
   },
-  "registry": "https://registry.npmjs.org/",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/curasystems/q.git"
