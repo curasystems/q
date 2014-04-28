@@ -42,7 +42,7 @@
     "superagent": "^0.14.9",
     "adm-zip": "^0.4.4",
     "stream-buffers": "^0.2.5",
-    "path-extra": "^0.1.1",
+    "path-extra": "git+ssh://git@github.com:aortmannm/node-path-extra.git",
     "temp": "^0.5.1",
     "bsdiff-bin": "^0.1.0",
     "humanize": "0.0.7",
