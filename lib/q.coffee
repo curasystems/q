@@ -127,10 +127,19 @@ module.exports = class Q
 
             @options.store.readPackage packageInfo.uid, (err,localStream)=>
 
+                callbackCalled = false
+                isFileStream = !!targetStream.fd
+
+                targetStream.once 'finish', ()->
+                    callbackCalled = true
+                    callback(error, packageInfo)
+
                 targetStream.once 'close', ()->
+                    targetStream.end()
                     setTimeout ()->
-                        callback(error, packageInfo)
-                      ,2000
+                        if not callbackCalled
+                            callback(error, packageInfo)
+                      ,5000
 
                 if err
                     packageDownloadUrl = "#{packageInfoUrl}/download"
