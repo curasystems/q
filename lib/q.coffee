@@ -113,15 +113,13 @@ module.exports = class Q
         
         {name, version} = @_splitIdentifier(identifier)
 
-        request = superagent.agent()
-
         packageInfoUrl = "#{serverUrl}/packages/#{name}/#{version}"
 
-        request.get(packageInfoUrl).end (error,response)=>
+        needle.get(packageInfoUrl).end (error,response)=>
 
             console.log(packageInfoUrl, error)
-            return callback('not found') if response.notFound    
-            return callback('communication error:' + response.statusCode) unless response.ok
+            return callback('not found') if response.statusCode is 404
+            return callback('communication error:' + response.statusCode) unless response.statusCode is 200
 
             packageInfo = response.body
 
@@ -143,24 +141,25 @@ module.exports = class Q
 
                 if err
                     packageDownloadUrl = "#{packageInfoUrl}/download"
-                    @_downloadPackage( name, packageDownloadUrl, request, targetStream )
+                    @_downloadPackage( name, packageDownloadUrl, targetStream )
                 else
                     localStream.pipe(targetStream)
 
-    _downloadPackage: ( packageName, downloadUrl, request, targetStream)->
+    _downloadPackage: ( packageName, downloadUrl, targetStream)->
 
         @options.store.findHighest packageName, '*', (err, highestLocalVersion)=>
-            return @_downloadFullPackage(downloadUrl, request, targetStream) if(err)
+            return @_downloadFullPackage(downloadUrl, targetStream) if(err)
 
-            @_downloadPackageAsPatch(packageName, highestLocalVersion, downloadUrl, request, targetStream)
+            @_downloadPackageAsPatch(packageName, highestLocalVersion, downloadUrl, targetStream)
    
-    _downloadPackageAsPatch: (packageName, localVersionToUse, downloadUrl, request, targetStream)->
+    _downloadPackageAsPatch: (packageName, localVersionToUse, downloadUrl, targetStream)->
 
         console.log "INFO:".green + " trying to download patch against local #{localVersionToUse}"
 
         @options.store.getInfo packageName, localVersionToUse, (err,localPackageInfo)=>
-            return @_downloadFullPackage(downloadUrl, request, targetStream) if err
+            return @_downloadFullPackage(downloadUrl, targetStream) if err
 
+            request = superagent.agent()
             downloadPatchRequest = request.get(downloadUrl).query( patchFrom:localPackageInfo.uid )
 
             tempPath = temp.path(suffix:'.temp')
@@ -177,7 +176,7 @@ module.exports = class Q
                     temporaryFullPath = temp.path(suffix:'.pkg')
                     @_createPackageFromPatch localPackageInfo.uid,temporaryFullPath,tempPath, (err)=>
                         if err
-                            return @_downloadFullPackage(downloadUrl, request, targetStream) 
+                            return @_downloadFullPackage(downloadUrl, targetStream) 
                         packageStream = fs.createReadStream(temporaryFullPath)
                         packageStream.pipe(targetStream)
                 else if downloadResponse.headers['content-disposition'].indexOf('.pkg')>0
@@ -194,11 +193,11 @@ module.exports = class Q
             bs.patch sourcePackagePath, targetPath, patchPath, (err)->
                 callback(err)
                     
-    _downloadFullPackage: (downloadUrl, request, targetStream)->
+    _downloadFullPackage: (downloadUrl, targetStream)->
 
         console.log "INFO:".green + " downloading full package..."
         
-        downloadRequest = request.get(downloadUrl)
+        downloadRequest = needle.get(downloadUrl)
         downloadRequest.pipe(targetStream)
 
     _splitIdentifier: (identifier, defaultVersion='latest')->
@@ -216,16 +215,15 @@ module.exports = class Q
         @listPackageContent packageIdentifier, (err, content)=>
             return callback(err) if err
             
-            request = superagent.agent()
-            
             packageUrl = "#{targetUrl}/packages/#{content.name}"
             latestServerPackageUrl = "#{packageUrl}/latest"
 
+            request = superagent.agent()
             request.get(latestServerPackageUrl).end (err,res)=>
                 return callback(err) if err
 
                 if res.error or not @options.patch
-                    @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (err,res)->
+                    @_uploadFullPackage packageIdentifier, "#{targetUrl}/packages", (err,res)->
                         return callback(err) if err
                         return callback(null) if res.ok
                             
@@ -238,26 +236,26 @@ module.exports = class Q
                     if latestServerPackage.version == content.version
                         return callback('version already on target server')
 
-                    @_attemptUploadPatch packageIdentifier, latestServerPackage, packageUrl, request, (err)=>
+                    @_attemptUploadPatch packageIdentifier, latestServerPackage, packageUrl, (err)=>
                         
                         return callback(null) unless err
                         console.log "could not upload patch trying full upload"
                         console.log err
                                                 
-                        @_uploadFullPackage request, packageIdentifier, "#{targetUrl}/packages", (err,res)->
+                        @_uploadFullPackage packageIdentifier, "#{targetUrl}/packages", (err,res)->
                             return callback(err) if err
                             return callback(null) if res.ok
                   
                             callback(res.statusCode)
 
-    _attemptUploadPatch: (packageIdentifier, serverPackageInfo, packageUrl, request, callback)->
+    _attemptUploadPatch: (packageIdentifier, serverPackageInfo, packageUrl, callback)->
             
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
             return callback(err) if err
            
             return callback('too small') if fs.statSync(packagePath).size / 1024 < @options.minForPatch
            
-            @_accessPreviousPackagePathForDiff serverPackageInfo, packageUrl, request, (err,previousVersionPath,args)=>
+            @_accessPreviousPackagePathForDiff serverPackageInfo, packageUrl, (err,previousVersionPath,args)=>
                 return callback(err) if err
 
                 patchPath = temp.path(suffix:'.patch')
@@ -271,12 +269,12 @@ module.exports = class Q
                     console.log "uploading #{humanize.filesize(patchSize)} ... (saved #{humanize.filesize(savedBytes)})"
                     
                     previousVersionUrl = "#{packageUrl}/#{serverPackageInfo.version}"
-                    @_uploadPatch request, patchPath, previousVersionUrl, (err)=>
+                    @_uploadPatch patchPath, previousVersionUrl, (err)=>
                         fs.unlinkSync(patchPath)
                         fs.unlinkSync(previousVersionPath) if args.deleteAfterUse
                         callback(err)
 
-    _accessPreviousPackagePathForDiff: (serverPackageInfo, serverPackageUrl, request, callback)->
+    _accessPreviousPackagePathForDiff: (serverPackageInfo, serverPackageUrl, callback)->
 
         @options.store.getInfo serverPackageInfo.name, serverPackageInfo.version, (err, localInfo)=>
 
@@ -292,18 +290,21 @@ module.exports = class Q
                 previousVersionUrl = "#{serverPackageUrl}/#{serverPackageInfo.version}"
                 downloadUrl = "#{previousVersionUrl}/download"
 
-                downloadRequest = request.get(downloadUrl)
-                    
                 downloadPath = temp.path(suffix:'.pkg')
                 downloadStream = fs.createWriteStream(downloadPath)
+
+                downloadRequest = needle.get(downloadUrl)
                 downloadRequest.pipe(downloadStream)
 
                 downloadStream.on 'close',(err)=>
                     return callback(err) if err           
                     callback(null, downloadPath, deleteAfterUse:true)
 
-    _uploadPatch: (request, patchPath, previousVersionUrl, callback)->
+    _uploadPatch: (patchPath, previousVersionUrl, callback)->
+
         patchUrl = "#{previousVersionUrl}/patch"
+        
+        request = superagent.agent()
         request.post(patchUrl)
             .attach('upload.patch', patchPath)
             .end (err,res)->
@@ -311,7 +312,7 @@ module.exports = class Q
                 return callback(res.statusCode) unless res.ok
                 callback(null)
 
-    _uploadFullPackage: (request, packageIdentifier, targetUrl, callback)->
+    _uploadFullPackage: (packageIdentifier, targetUrl, callback)->
 
         @options.store.getPackageStoragePath packageIdentifier, (err, packagePath)=>
             return callback(err) if err
@@ -319,6 +320,7 @@ module.exports = class Q
             packageSize = fs.statSync(packagePath).size            
             console.log "uploading #{humanize.filesize(packageSize)} ..."
 
+            request = superagent.agent()
             req = request.post(targetUrl)
                 .attach(packageIdentifier+'.pkg', packagePath)
                 .end(callback)
