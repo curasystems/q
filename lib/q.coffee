@@ -115,7 +115,8 @@ module.exports = class Q
 
         packageInfoUrl = "#{serverUrl}/packages/#{name}/#{version}"
 
-        needle.get(packageInfoUrl).end (error,response)=>
+        needle.get packageInfoUrl, (error,response)=>
+            return callback('error ' + error.toString()) if error
 
             console.log(packageInfoUrl, error)
             return callback('not found') if response.statusCode is 404
