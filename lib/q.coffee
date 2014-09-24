@@ -126,19 +126,12 @@ module.exports = class Q
 
             @options.store.readPackage packageInfo.uid, (err,localStream)=>
 
-                callbackCalled = false
-                isFileStream = !!targetStream.fd
-
-                targetStream.once 'finish', ()->
-                    callbackCalled = true
-                    callback(error, packageInfo)
-
                 targetStream.once 'close', ()->
-                    targetStream.end()
                     setTimeout ()->
-                        if not callbackCalled
-                            callback(error, packageInfo)
-                      ,5000
+                        callback(null, packageInfo)
+                      ,100
+                      
+                 targetStream.once 'error', (err)->callback(err, packageInfo)
 
                 if err
                     packageDownloadUrl = "#{packageInfoUrl}/download"
@@ -196,7 +189,7 @@ module.exports = class Q
                     
     _downloadFullPackage: (downloadUrl, targetStream)->
 
-        console.log "INFO:".green + " downloading full package..."
+        console.log "INFO: downloading full package from #{downloadUrl}"
         
         downloadRequest = needle.get(downloadUrl)
         downloadRequest.pipe(targetStream)
