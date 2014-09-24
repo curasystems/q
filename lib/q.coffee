@@ -130,8 +130,9 @@ module.exports = class Q
                     setTimeout ()->
                         callback(null, packageInfo)
                       ,100
-                      
-                 targetStream.once 'error', (err)->callback(err, packageInfo)
+
+                targetStream.once 'error', (err)->
+                    callback(err)
 
                 if err
                     packageDownloadUrl = "#{packageInfoUrl}/download"
