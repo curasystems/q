@@ -1,5 +1,6 @@
 path = require('path')
 fs = require('fs')
+stream = require('stream')
 
 _ = require('underscore')
 Buffers = require('buffers')
@@ -8,13 +9,13 @@ async = require('async')
 signer = require('ssh-signer')
 streamBuffers = require('stream-buffers')
 temp = require('temp')
-sha1 = require('./sha1')
 superagent = require('superagent')
 needle = require('needle')
 qStore = require('q-fs-store')
 bs = require('bsdiff-bin')
 humanize = require('humanize')
 
+sha1 = require('./sha1')
 Packer = require('./Packer')
 Unpacker = require('./Unpacker')
 
@@ -74,7 +75,7 @@ module.exports = class Q
 
         packageInfoUrl = "#{serverUrl}/packages/#{name}?version=#{version}"
 
-        needle.get packageInfoUrl,options, (error, response, body)=>
+        needle.get packageInfoUrl, options, (error, response, body)=>
 
             return callback(error) if error
             return callback("package '#{identifier}' not found on #{serverUrl}") if response.statusCode is 404    
@@ -126,15 +127,27 @@ module.exports = class Q
 
             @options.store.readPackage packageInfo.uid, (err,localStream)=>
 
-                targetStream.once 'close', ()->
+                #targetStream.once 'finish', ()->console.log('targetStream finish')
+                targetStream.once 'close', ()->console.log('targetStream close')
+                targetStream.once 'end', ()->console.log('targetStream end')
+
+                # targetStream.once 'close', ()->
+                #     setTimeout ()->
+                #         callback(null, packageInfo)
+                #       ,100
+
+                targetStream.once 'error', (err)->
+                    console.log('targetStream error',err)
+                    callback(err)
+
+                targetStream.once 'finish', ()->
+                    console.log('targetStream finish')
                     setTimeout ()->
                         callback(null, packageInfo)
                       ,100
 
-                targetStream.once 'error', (err)->
-                    callback(err)
-
                 if err
+                    console.log('downloading package')
                     packageDownloadUrl = "#{packageInfoUrl}/download"
                     @_downloadPackage( name, packageDownloadUrl, targetStream )
                 else
@@ -188,12 +201,23 @@ module.exports = class Q
             bs.patch sourcePackagePath, targetPath, patchPath, (err)->
                 callback(err)
                     
-    _downloadFullPackage: (downloadUrl, targetStream)->
+    _downloadFullPackage: (downloadUrl, targetStream,cb)->
 
         console.log "INFO: downloading full package from #{downloadUrl}"
-        
-        downloadRequest = needle.get(downloadUrl)
+
+        downloadRequest = @_getFromUrl(downloadUrl)
         downloadRequest.pipe(targetStream)
+
+    _getFromUrl: (url,args...)->
+        out = new stream.PassThrough({ objectMode: false })
+
+        protocol = if url.indexOf('https') is 0 then 'https' else 'http'
+        
+        module = require(protocol)
+        module.get url,args..., (response)->
+            response.pipe(out)         
+
+        return out
 
     _splitIdentifier: (identifier, defaultVersion='latest')->
         
@@ -288,7 +312,8 @@ module.exports = class Q
                 downloadPath = temp.path(suffix:'.pkg')
                 downloadStream = fs.createWriteStream(downloadPath)
 
-                downloadRequest = needle.get(downloadUrl)
+
+                downloadRequest = @_getFromUrl(downloadUrl)
                 downloadRequest.pipe(downloadStream)
 
                 downloadStream.on 'close',(err)=>
