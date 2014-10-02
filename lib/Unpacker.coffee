@@ -18,20 +18,24 @@ module.exports = class Unpacker
             mkdirp targetDir, (err)=>
                 return callback(err) if err
 
+                console.log('Starting unzip into', targetDir);
+                
                 zipBufferStream = new streamBuffers.WritableStreamBuffer()
                 packageStream.pipe(zipBufferStream)
 
                 zipBufferStream.on 'close', ()->
 
-                    zip = new AdmZip(zipBufferStream.getContents())
-                    zipEntries = zip.getEntries()
-                    zipEntries.forEach (entry)->
+                    try
+                        zip = new AdmZip(zipBufferStream.getContents())
+                        zipEntries = zip.getEntries()
+                        zipEntries.forEach (entry)->
 
-                        return if( entry.isDirectory )
-                            
-                        targetPath = path.join(targetDir, entry.entryName)
-                        mkdirp.sync path.dirname(targetPath)
-                        fs.writeFileSync targetPath, entry.getData()
-
-                    callback(null)
-            
+                            return if( entry.isDirectory )                                
+                            targetPath = path.join(targetDir, entry.entryName)
+                            mkdirp.sync path.dirname(targetPath)
+                            fs.writeFileSync targetPath, entry.getData()
+                        
+                        callback(null)
+                    catch e
+                        console.log("ERROR: Could not unpack Zip to '#{targetDir}' Possibly corrupted.")
+                        callback(e)
