@@ -1,6 +1,6 @@
 {
   "name": "quartermaster",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "quartermaster is a small library to create compressed binary packages for distribution",
   "main": "index.js",
   "scripts": {
@@ -44,7 +44,7 @@
     "mocha": "^1.8.2",
     "needle": "^0.7.9",
     "optimist": "^0.3.7",
-    "path-extra": "git+ssh://git@github.com:aortmannm/node-path-extra.git",
+    "path-extra": "3.x.x",
     "q-fs-store": "^0.1.2",
     "semver": "^1.1.4",
     "sinon": "^1.6.0",
